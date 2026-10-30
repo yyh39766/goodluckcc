@@ -1,0 +1,59 @@
+name: LotteryPicker
+
+options:
+  bundleIdPrefix: cn.local
+  deploymentTarget:
+    iOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    # 全程不签名：CI 里没有证书，产出的 .ipa 由用户自己的侧载工具重签
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    ENABLE_BITCODE: "NO"
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "14.0"
+
+targets:
+  LotteryPicker:
+    type: application
+    platform: iOS
+    sources:
+      - path: LotteryPicker/AppDelegate.swift
+      - path: LotteryPicker/RootViewController.swift
+      - path: LotteryPicker/ReportViewController.swift
+      - path: LotteryPicker/Bridge.swift
+      - path: LotteryPicker/Assets.xcassets
+      # 三个 web 文件按资源显式列出（buildPhase: resources 是 XcodeGen 的确定写法）。
+      # 会被平铺到 .app 根目录，Swift 侧用 Bundle.main.url(forResource:) 直接取。
+      - path: LotteryPicker/Assets/index.html
+        buildPhase: resources
+      - path: LotteryPicker/Assets/report.html
+        buildPhase: resources
+      - path: LotteryPicker/Assets/bridge.js
+        buildPhase: resources
+    settings:
+      base:
+        INFOPLIST_FILE: Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: cn.local.lotterypicker
+        PRODUCT_NAME: LotteryPicker
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "2.2.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SUPPORTS_MACCATALYST: "NO"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
+        VALIDATE_PRODUCT: "NO"
+
+# 显式声明 scheme：CI 里 xcodebuild -scheme 才不会报 "scheme not found"
+schemes:
+  LotteryPicker:
+    build:
+      targets:
+        LotteryPicker: all
+    run:
+      config: Release
+    archive:
+      config: Release
