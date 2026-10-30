@@ -1,0 +1,61 @@
+name: build-ipa
+
+# 在 GitHub 的 macOS 机器上编出一个未签名的 .ipa。
+# 触发：网页上点 "Run workflow"，或往仓库推一次代码。
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成 Xcode 工程
+        run: xcodegen generate --spec project.yml
+
+      - name: 编译（不签名）
+        run: |
+          xcodebuild \
+            -project LotteryPicker.xcodeproj \
+            -scheme LotteryPicker \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            | tee build.log
+          # xcodebuild 偶尔把失败藏在日志里，退出码却给 0
+          if grep -qE "^\*\* BUILD FAILED|error: " build.log; then
+            echo "编译失败，见上面的日志"; exit 1
+          fi
+
+      - name: 打包成 IPA
+        run: |
+          APP="build/Build/Products/Release-iphoneos/LotteryPicker.app"
+          test -d "$APP" || { echo "没找到 $APP"; exit 1; }
+          rm -rf Payload LotteryPicker-unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          # 未签名包不写 _CodeSignature，侧载工具会重签
+          rm -rf Payload/LotteryPicker.app/_CodeSignature
+          zip -qry LotteryPicker-unsigned.ipa Payload
+          ls -lh LotteryPicker-unsigned.ipa
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: LotteryPicker-unsigned-ipa
+          path: LotteryPicker-unsigned.ipa
+          if-no-files-found: error
