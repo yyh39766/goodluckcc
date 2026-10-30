@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>选号器 2.0 · 调研与方案</title>
+<style>
+:root{
+  --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e9f2;
+  --bg:#f4f6fb; --card:#ffffff; --red:#cf3a33; --blue:#2f6fd0;
+  --amber:#b45309; --green:#15803d;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.78 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+  "Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:40px 22px 80px}
+header{padding:8px 0 26px;border-bottom:1px solid var(--line);margin-bottom:34px}
+.kicker{font-size:12px;letter-spacing:.16em;color:var(--muted);
+  text-transform:uppercase;font-weight:600}
+h1{font-size:30px;line-height:1.3;margin:10px 0 8px;letter-spacing:-.01em}
+.sub{color:var(--ink2);font-size:15.5px;margin:0}
+.meta{margin-top:16px;font-size:12.5px;color:var(--muted);
+  display:flex;flex-wrap:wrap;gap:6px 18px}
+.meta b{color:var(--ink2);font-weight:600}
+h2{font-size:20px;margin:44px 0 14px;padding-left:12px;
+  border-left:3px solid var(--ink);line-height:1.4}
+h3{font-size:15.5px;margin:26px 0 8px;color:var(--ink)}
+p{margin:10px 0;color:var(--ink2)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:20px 22px;margin:16px 0;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.lead{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ink);
+  border-radius:10px;padding:18px 22px;margin:18px 0 8px;font-size:16px;color:var(--ink)}
+.lead b{font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;
+  vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;
+  background:#fafbfe}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th.num{text-align:right}
+tr:last-child td{border-bottom:none}
+.hot{color:var(--red);font-weight:600}
+.cold{color:var(--blue);font-weight:600}
+.muted{color:var(--muted)}
+.good{color:var(--green);font-weight:600}
+.bad{color:var(--red);font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;
+  border:1px solid var(--line);color:var(--muted);background:#fafbfe;
+  vertical-align:1px;margin-left:6px}
+.tag.red{color:var(--red);border-color:#f2d5d3;background:#fdf4f3}
+.tag.blue{color:var(--blue);border-color:#d6e2f6;background:#f4f8fe}
+.tag.green{color:var(--green);border-color:#d3e9d8;background:#f4fbf6}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+.kpi div{background:#fff;border:1px solid var(--line);border-radius:10px;
+  padding:14px 14px 12px}
+.kpi .v{font-size:22px;font-weight:700;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.kpi .k{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.note{font-size:12.5px;color:var(--muted);margin:10px 0 0;line-height:1.7}
+.callout{background:#fbfcfe;border:1px dashed var(--line);border-radius:10px;
+  padding:14px 18px;font-size:13.5px;color:var(--ink2);margin:14px 0}
+.callout b{color:var(--ink)}
+ul,ol{margin:10px 0 10px 4px;padding-left:22px;color:var(--ink2)}
+li{margin:6px 0}
+code{background:#f1f4fa;padding:1px 5px;border-radius:4px;font-size:12.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.foot{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--muted)}
+ol.ref{padding-left:20px;font-size:13px;color:var(--ink2)}
+ol.ref li{margin:7px 0}
+svg{display:block;margin:6px 0}
+.cap{font-size:12px;color:var(--muted);margin:2px 0 0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.kpi{grid-template-columns:repeat(2,1fr)}
+ .split{grid-template-columns:1fr}
+ h1{font-size:24px}.wrap{padding:26px 16px 60px}}
+</style></head><body><div class="wrap">
+
+<header>
+  <div class="kicker">调研报告 · 2026-10-29</div>
+  <h1>选号器 2.0：先搞清楚什么值得优化</h1>
+  <p class="sub">盘点 9 个现成项目 + 用 3,625 期真实开奖数据做的 5 项新检验，
+  回答一个问题——选号这件事，到底哪一部分是可以客观优化的。</p>
+  <div class="meta">
+    <span><b>双色球</b> 2,082 期（2013001–2026124）</span>
+    <span><b>大乐透</b> 1,543 期（16078–26123）</span>
+    <span><b>数据源</b> 福彩官网 / 体彩官网（含销售额与奖级明细）</span>
+  </div>
+</header>
+
+<div class="lead">
+现有开源项目分成两派：<b>一派预测号码（已被证明无效）</b>，
+<b>一派测量人群（有效，且有 30 年学术支撑）</b>。
+2.0 应该彻底走第二条路——<b>不预测球会开出什么，只预测别人会选什么号</b>。
+这是唯一一件既有数学依据、又能真正改变期望值的事。
+</div>
+
+<h2>一、调研：现成项目能给我们什么</h2>
+
+<p>我用 GitHub API 检索了中英文关键词，并对候选仓库逐个读了 README 与方法论文档。
+剔除掉纯博彩平台、抽奖转盘组件后，真正与“科学选号”相关的只有下面这些。</p>
+
+<h3>1.1 值得参考的（方法论层面）</h3>
+<table>
+<thead><tr><th style="width:26%">项目</th><th style="width:9%">语言·星</th>
+<th style="width:37%">它做了什么</th><th>我的判断</th></tr></thead>
+<tbody>
+<tr><td><b>LeilaoMi/LottoLab</b></td><td class="muted">Python · 4★</td>
+<td>中文 8 彩种数据工作台。统计检验用无放回零模型 + Monte Carlo + 序列相关 +
+多重比较校正；模型回测用时间切分 + 逐号码 Brier 分数 + 循环块 bootstrap；
+还有“预测台账 → 开奖后自动对账”的复盘闭环，以及双色球冷门度。</td>
+<td><b class="good">最值得借，但只借方法论</b>。它的“诚实统计”立场几乎和我上一版报告的结论完全一致：
+被证伪的功能留档而不是删掉；明确写“一切只描述历史、不改变中奖概率”。
+架构上它是 Web + 数据库 + 每日采集，对单文件 EXE 来说太重，不借。</td></tr>
+
+<tr><td><b>cpjust/Lotto</b></td><td class="muted">Python · 3★</td>
+<td>覆盖设计（lottery wheel）生成 + 中奖模拟 + 精确赔率计算器
+（<code>odds.py</code> 用组合数直接算“中 3 个”的概率）。</td>
+<td><b class="good">借覆盖设计</b>。它的 <code>wheel-*.conf</code> 是把号码模板展开成
+“保证覆盖 t 个号”的注单，这正是 2.0 “胆拖 + 保底覆盖”需要的工程实现。</td></tr>
+
+<tr><td><b>stanislav-ilchev/<br>CoveringDesignBuilder</b><br>
+<span class="muted" style="font-size:12px">WynandVStaden/<br>covering-design-records</span></td>
+<td class="muted">Java · 5★<br> C++ · 2★</td>
+<td>覆盖设计 C(v,k,t) 的构造与最优记录表（SAT 式局部搜索 / 权重子句）。</td>
+<td><b class="good">借算法思想</b>。核心是：给定 v 个号里选 k 个、共 n 注，
+让任意 t 个号至少落在一注里。数学上有严格保证，是可以对用户明确承诺的部分。</td></tr>
+
+<tr><td><b>UrbanScientist/<br>1_Mathematical_<br>Understanding_of_Powerball</b></td>
+<td class="muted">R · 3★</td>
+<td>学术级 notebook：Powerball 的概率推导、期望值、奖金分摊。</td>
+<td><b>借表达方式</b>。它示范了怎么把公式讲清楚而不糊弄，
+适合做 2.0 里的“依据”页面。</td></tr>
+</tbody></table>
+
+<h3>1.2 反面教材（占了这个领域 95% 的星数）</h3>
+<table>
+<thead><tr><th style="width:26%">项目</th><th style="width:9%">星</th>
+<th style="width:37%">做法</th><th>为什么不做</th></tr></thead>
+<tbody>
+<tr><td>zepen/predict_Lottery_ticket</td><td class="muted">1055★</td>
+<td rowspan="3">用 LSTM / Transformer / 随机森林把历史开奖当时间序列拟合，
+输出“下一期推荐号码”。</td>
+<td rowspan="3"><b class="bad">这是把噪声当信号</b>。
+我在上一版已用回测证明：每期取最热的 6 个号，下期平均命中 1.0956 个；
+取最冷的 6 个命中 1.0966 个；随机期望 1.0909 个（z = 0.24 / 0.29，均不显著）。
+既然号码之间没有可学习的时间结构，再深的网络也只能拟合训练集里的偶然波动。
+它们的高星数反映的是需求，不是有效性。</td></tr>
+<tr><td>chengstone/LotteryPredict</td><td class="muted">414★</td></tr>
+<tr><td>KittenCN/predict_Lottery_ticket</td><td class="muted">274★</td></tr>
+<tr><td>LottoKim AI（商业站）</td><td class="muted">—</td>
+<td>把 Stern &amp; Cover 的合法研究（避开热门组合）与 XGBoost、
+“图案理论”、蒙特卡洛“回归均值”混在一起卖。</td>
+<td><b class="bad">典型话术包装</b>。它的页面上真研究和伪科学并列，
+让人分不清哪条有依据。2.0 要做的恰恰相反：每一条结论都标出检验方法与 p 值。</td></tr>
+</tbody></table>
+
+<h3>1.3 学术脉络（这是真正的“依据”来源）</h3>
+<div class="card">
+<p style="margin-top:0">这条研究线非常清楚，而且结论高度一致：<b>球是随机的，人选号不是。</b></p>
+<ul>
+<li><b>Stern &amp; Cover (1989, JASA)</b>：提出用最大熵分布从边际频率估计
+“哪些组合被买得更多”，并用蒙特卡洛算各种策略的期望回报。结论是
+<b>只有选冷门组合才可能让期望回报超过票价</b>，且要在大销量或大滚存时才成立。</li>
+<li><b>Haigh (1997, JRSS-A)</b>：英国国家彩票前 96 期，
+开奖号码与随机完全一致；但<b>彩民选的组合远非随机</b>，
+“识别不受欢迎组合的能力可以提高平均回报”。</li>
+<li><b>Farrell, Hartley, Lanot &amp; Walker (2000, JBES)</b>：
+用滚存带来的期望值变化做识别，正式检验并命名了 <b>conscious selection</b>
+（有意识选号），即彩民不从均匀分布里选号。</li>
+<li><b>Cox, Daniell &amp; Nicole (1997)</b>：用最大熵方法把英国彩票的期望奖金翻倍。</li>
+<li><b>La Jolla Covering Repository</b>：覆盖设计 C(v,k,t) 的最优记录表，
+是“保底覆盖”的数学基础。</li>
+</ul>
+<p class="note">注意一个关键差别：上面这些研究的“冷门”数据来自彩票公司公布的
+<b>每注号码销量</b>。中国不公布这个，所以我们只能从
+<b>一等奖注数</b> 反推——这正是下面第二节做的事。</p>
+</div>
+
+<h2>二、用我们自己的数据反解“大众选号偏好”</h2>
+
+<p>官方接口除了号码，还给了每期的<b>销售额、奖池、各奖级注数与单注奖金</b>。
+这批字段此前没用上，而它们恰好是唯一能观测到“别人买了什么”的窗口。
+思路很直接：某期开出的号码若被很多人买，一等奖注数就会异常多。</p>
+
+<p class="note"><b>样本范围说明：</b>大乐透的奖级明细自 2016 年第 078 期起才在官方接口提供，
+故该彩种使用最近 10 年共 1,543 期。这恰好避开了 2014 年前的机制变更段——
+上一版已检验出 2007–2013 段前区号码频次 χ² = 234.2（df = 34，p ≈ 10<sup>−31</sup>），
+与均匀分布不符，混入会污染结论。双色球 2,082 期则全程可用。</p>
+
+<div class="kpi">
+  <div><div class="v">11.1</div><div class="k">双色球离散指数<br>（泊松应为 1.0）</div></div>
+  <div><div class="v">7.62</div><div class="k">大乐透离散指数<br>（独立重复验证）</div></div>
+  <div><div class="v">1.00 / 1.11</div>
+  <div class="k">组合受欢迎度<br>变异系数（两彩种）</div></div>
+  <div><div class="v">18 期</div>
+  <div class="k">双色球一等奖 0 注<br>（泊松期望仅 0.2 期）</div></div>
+</div>
+
+<h3>发现 1｜一等奖注数严重“过度离散”，方差是泊松假设的 11 倍</h3>
+<p>如果所有人都从 17,721,088 种组合里均匀随机地选，那么给定某期开奖号码，
+中一等奖的人数应服从泊松分布。实测结果彻底否定了这一点：
+离散指数 D = <b>11.10</b>（χ² = 23,090，df = 2,081，
+p &lt; 1e-300），大乐透独立验证得 D = <b>7.62</b>。
+两者都远大于 1，说明<b>不同组合的受欢迎程度差异极大</b>。</p>
+
+<div class="split">
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">双色球一等奖注数分布</h3>
+<table style="margin:8px 0 0">
+<thead><tr><th>注数</th><th class="num">实测期数</th><th class="num">泊松期望</th>
+<th class="num">倍数</th></tr></thead>
+<tbody><tr><td>0</td><td class='num'>18</td><td class='num muted'>0.17</td><td class='num hot'>105.0×</td></tr><tr><td>1–2</td><td class='num'>168</td><td class='num muted'>7.66</td><td class='num hot'>21.9×</td></tr><tr><td>3–5</td><td class='num'>546</td><td class='num muted'>146.55</td><td class='num hot'>3.7×</td></tr><tr><td>6–9</td><td class='num'>595</td><td class='num muted'>791.22</td><td class='num '>0.8×</td></tr><tr><td>10–14</td><td class='num'>383</td><td class='num muted'>928.41</td><td class='num cold'>0.4×</td></tr><tr><td>15–19</td><td class='num'>173</td><td class='num muted'>194.59</td><td class='num '>0.9×</td></tr><tr><td>20–29</td><td class='num'>117</td><td class='num muted'>13.38</td><td class='num hot'>8.7×</td></tr><tr><td>30–49</td><td class='num'>56</td><td class='num muted'>0.01</td><td class='num hot'>8,637×</td></tr><tr><td>50–99</td><td class='num'>21</td><td class='num muted'>0.00</td><td class='num muted'>—</td></tr><tr><td>100以上</td><td class='num'>5</td><td class='num muted'>0.00</td><td class='num muted'>—</td></tr></tbody></table>
+<p class="cap">倍数是“实测 ÷ 期望”。中间区间被压扁、两端被拉长，
+是典型的过度离散形态。</p>
+</div>
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">大乐透（独立验证）</h3>
+<table style="margin:8px 0 0">
+<thead><tr><th>注数</th><th class="num">实测期数</th><th class="num">泊松期望</th>
+<th class="num">倍数</th></tr></thead>
+<tbody><tr><td>0</td><td class='num'>76</td><td class='num muted'>11.73</td><td class='num hot'>6.5×</td></tr><tr><td>1–2</td><td class='num'>393</td><td class='num muted'>171.18</td><td class='num hot'>2.3×</td></tr><tr><td>3–5</td><td class='num'>548</td><td class='num muted'>674.60</td><td class='num '>0.8×</td></tr><tr><td>6–9</td><td class='num'>330</td><td class='num muted'>591.96</td><td class='num cold'>0.6×</td></tr><tr><td>10–14</td><td class='num'>129</td><td class='num muted'>91.72</td><td class='num '>1.4×</td></tr><tr><td>15–19</td><td class='num'>37</td><td class='num muted'>1.79</td><td class='num hot'>20.7×</td></tr><tr><td>20–29</td><td class='num'>14</td><td class='num muted'>0.01</td><td class='num hot'>1,382×</td></tr><tr><td>30–49</td><td class='num'>11</td><td class='num muted'>0.00</td><td class='num muted'>—</td></tr><tr><td>50–99</td><td class='num'>4</td><td class='num muted'>0.00</td><td class='num muted'>—</td></tr><tr><td>100以上</td><td class='num'>1</td><td class='num muted'>0.00</td><td class='num muted'>—</td></tr></tbody></table>
+<p class="cap">两个彩种、两套规则、不同年份，形态完全一致——
+这不是某一次数据异常，而是<b>彩民行为的稳定特征</b>。</p>
+</div>
+</div>
+
+<h3>发现 2｜极端案例直接把“热门形态”指了出来</h3>
+<p>双色球 2082 期里，一等奖注数最多的那一期是
+<b>2019052</b>：153 注中奖，
+而按销量只该有 9.51 注——
+<b>16 倍</b>。
+开奖号码是 <span style="font-weight:600">03 06 09 13 16 19</span>。
+一眼就能看出问题：<b>3、6、9 是公差为 3 的等差数列，13、16、19 又是一组公差为 3 的等差数列</b>。
+这种“有规律”的组合，是大量彩民共同的偏好。</p>
+
+<div class="card">
+<table style="margin:0">
+<thead><tr><th>期号</th><th class="num">一等奖注数</th><th class="num">泊松期望</th>
+<th class="num">倍数</th><th>开奖号码</th></tr></thead>
+<tbody>
+<tr><td>2019052</td><td class='num hot'>153</td><td class='num muted'>9.51</td><td class='num hot'>16.1×</td><td class='muted'>03 06 09 13 16 19</td></tr><tr><td>2024016</td><td class='num hot'>136</td><td class='num muted'>11.06</td><td class='num hot'>12.3×</td><td class='muted'>07 12 20 24 32 33</td></tr><tr><td>2025001</td><td class='num hot'>108</td><td class='num muted'>11.24</td><td class='num hot'>9.6×</td><td class='muted'>02 03 17 18 22 33</td></tr><tr><td>2014115</td><td class='num hot'>107</td><td class='num muted'>10.95</td><td class='num hot'>9.8×</td><td class='muted'>01 09 10 11 13 32</td></tr><tr><td>2013069</td><td class='num hot'>105</td><td class='num muted'>10.26</td><td class='num hot'>10.2×</td><td class='muted'>07 16 17 18 30 33</td></tr>
+</tbody></table>
+<p class="cap">双色球一等奖注数最高的 5 期。这些号码的共同点是“看起来有规律”：
+等差、连号、同尾、半区聚集。</p>
+</div>
+
+<h3>发现 3｜号码层面的偏好可以估出来，但别过度相信单个号码</h3>
+<p>把每期的一等奖注数当作因变量，33 个红球是否出现当作自变量，
+做 quasi-Poisson 回归（用 2082 期、平均每期 10.09 注）。
+联合检验结果：LR χ² = 1300.4，df = 32，
+p 1.6×10<sup>-189</sup>——<b>号码之间存在系统性的受欢迎程度差异</b>，这一点无可置疑。</p>
+<svg viewBox="0 0 680 210" width="100%" role="img" aria-label="双色球红球受欢迎程度"><line x1="38" y1="96.9" x2="668" y2="96.9" stroke="#c9d2e3" stroke-width="1"/><text x="32" y="100" font-size="9" fill="#68738a" text-anchor="end">1.00</text><line x1="38" y1="23.8" x2="668" y2="23.8" stroke="#eef2f9" stroke-width="1" stroke-dasharray="3 3"/><text x="32" y="27" font-size="9" fill="#9aa7bd" text-anchor="end">1.35</text><line x1="38" y1="145.6" x2="668" y2="145.6" stroke="#eef2f9" stroke-width="1" stroke-dasharray="3 3"/><text x="32" y="149" font-size="9" fill="#9aa7bd" text-anchor="end">0.82</text><rect x="41.1" y="37.6" width="13.0" height="59.3" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="47.5" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">9</text><rect x="60.1" y="57.3" width="13.0" height="39.6" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="66.6" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">5</text><rect x="79.2" y="63.4" width="13.0" height="33.5" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="85.7" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">7</text><rect x="98.3" y="63.5" width="13.0" height="33.4" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="104.8" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">8</text><rect x="117.4" y="66.9" width="13.0" height="29.9" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="123.9" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">3</text><rect x="136.5" y="67.9" width="13.0" height="29.0" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="143.0" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">19</text><rect x="155.6" y="69.3" width="13.0" height="27.6" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="162.1" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">27</text><rect x="174.7" y="75.3" width="13.0" height="21.5" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="181.2" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">6</text><rect x="193.8" y="82.2" width="13.0" height="14.7" fill="#d9534f" opacity="0.92" rx="1.2"/><text x="200.3" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">10</text><rect x="212.9" y="83.6" width="13.0" height="13.3" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="219.4" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">11</text><rect x="232.0" y="85.8" width="13.0" height="11.1" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="238.5" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">12</text><rect x="251.1" y="86.2" width="13.0" height="10.7" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="257.5" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">26</text><rect x="270.1" y="88.1" width="13.0" height="8.8" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="276.6" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">13</text><rect x="289.2" y="88.4" width="13.0" height="8.5" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="295.7" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">16</text><rect x="308.3" y="88.8" width="13.0" height="8.0" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="314.8" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">2</text><rect x="327.4" y="92.7" width="13.0" height="4.2" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="333.9" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">28</text><rect x="346.5" y="93.5" width="13.0" height="3.4" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="353.0" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">20</text><rect x="365.6" y="94.5" width="13.0" height="2.3" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="372.1" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">22</text><rect x="384.7" y="95.2" width="13.0" height="1.7" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="391.2" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">25</text><rect x="403.8" y="96.1" width="13.0" height="1.0" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="410.3" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">17</text><rect x="422.9" y="96.9" width="13.0" height="3.0" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="429.4" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">30</text><rect x="442.0" y="96.9" width="13.0" height="10.7" fill="#9aa7bd" opacity="0.55" rx="1.2"/><text x="448.5" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">29</text><rect x="461.1" y="96.9" width="13.0" height="16.3" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="467.5" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">18</text><rect x="480.1" y="96.9" width="13.0" height="20.7" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="486.6" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">4</text><rect x="499.2" y="96.9" width="13.0" height="23.9" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="505.7" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">33</text><rect x="518.3" y="96.9" width="13.0" height="24.2" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="524.8" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">24</text><rect x="537.4" y="96.9" width="13.0" height="28.1" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="543.9" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">23</text><rect x="556.5" y="96.9" width="13.0" height="28.5" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="563.0" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">15</text><rect x="575.6" y="96.9" width="13.0" height="31.9" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="582.1" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">14</text><rect x="594.7" y="96.9" width="13.0" height="35.8" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="601.2" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">21</text><rect x="613.8" y="96.9" width="13.0" height="39.5" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="620.3" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">1</text><rect x="632.9" y="96.9" width="13.0" height="47.6" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="639.4" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">32</text><rect x="652.0" y="96.9" width="13.0" height="51.0" fill="#2f6fd0" opacity="0.92" rx="1.2"/><text x="658.5" y="186" font-size="8.5" fill="#68738a" text-anchor="middle">31</text></svg>
+<p class="cap">纵轴是相对平均水平的倍数（1.00 = 平均）。红柱偏热，蓝柱偏冷。
+最热 9 号 1.28 倍，最冷 31 号
+0.81 倍，极差 1.57 倍。</p>
+
+<div class="callout">
+<b>但必须说清楚一个限制：</b>33 个号码同时比较时，Bonferroni 校正后的显著性门槛是
+|t| &gt; 3.17，而最强的 9 号 t 值只有约 3.1。
+也就是说，<b>整体上“号码热度有差异”成立，但“某个具体号码一定热/一定冷”
+在统计上还站不住</b>。2.0 会把号码偏好只用于<b>组合级排序</b>，
+不会做成“杀号”或“必选号”这种确定性功能。
+</div>
+
+<h3>发现 4｜组合形态的影响比单个号码更强，且可复现</h3>
+<p>把和值、连号对数、同尾重复数、最长等差数列长度等组合特征一起放进模型，
+联合检验 LR χ² = 467.5（df = 6，p 1.6×10<sup>-66</sup>），
+大乐透重复得 χ² = 88.8（p 4.4×10<sup>-15</sup>）。
+两个彩种都显著。</p>
+<table>
+<thead><tr><th style="width:24%">特征</th><th class="num">双色球系数</th>
+<th class="num">t 值</th><th class="num">大乐透系数</th><th class="num">t 值</th>
+<th>含义</th></tr></thead>
+<tbody>
+<tr><td>红球和值</td><td class='num'>-0.0037</td><td class='num hot'>-3.14</td><td class='num'>-0.0013</td><td class='num muted'>-0.77</td><td class='muted'>和为负 → 和值越低越热门</td></tr><tr><td>生日号个数</td><td class='num'>-0.0233</td><td class='num muted'>-0.16</td><td class='num'>-0.0868</td><td class='num muted'>-0.81</td><td class='muted'>控制和值后不再显著</td></tr><tr><td>连号对数</td><td class='num'>+0.0418</td><td class='num muted'>+1.48</td><td class='num'>+0.0428</td><td class='num muted'>+0.98</td><td class='muted'>略偏热，未达显著</td></tr><tr><td>同尾重复</td><td class='num'>+0.1068</td><td class='num hot'>+3.49</td><td class='num'>-0.0180</td><td class='num muted'>-0.40</td><td class='muted'>同尾越多越热门（3.5σ）</td></tr><tr><td>最长等差</td><td class='num'>+0.0682</td><td class='num muted'>+1.76</td><td class='num'>+0.0859</td><td class='num muted'>+1.52</td><td class='muted'>等差越长越热门</td></tr><tr><td>全为 ≤31</td><td class='num'>+0.1543</td><td class='num muted'>+0.92</td><td class='num'>+0.2228</td><td class='num muted'>+1.57</td><td class='muted'>六个号全在 1–31 内时更热</td></tr>
+</tbody></table>
+<p class="note">系数是 log 尺度的：+0.1068 表示“同尾重复每多一个，一等奖注数期望乘以
+1.11”。符号方向在两个彩种上基本一致（和值为负、等差不小于 0），
+但大乐透样本量少一半，多数系数不显著——这种“方向一致、强度不同”，
+恰恰是真实效应而非过拟合的样子。</p>
+
+<h3>发现 5｜一等奖封顶 1000 万，这直接决定了冷门策略的有效范围</h3>
+<p>这是本次调研里<b>最影响结论、却最少被提及</b>的一点。
+冷门号的全部收益都来自“少跟人分奖池”，但如果单注奖金已经顶格，
+少分也拿不到更多。</p>
+
+<div class="split">
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">双色球</h3>
+<ul style="margin:6px 0">
+<li>单注奖金中位 <b>7,393,402 元</b>，均值 7,610,658 元</li>
+<li>触顶（≥1000 万）<b class="bad">374 / 1965 期
+= 19.0%</b></li>
+<li>即约 <b>81%</b> 的期数里，冷门号仍有额外收益空间</li>
+</ul>
+</div>
+<div class="card" style="margin:0">
+<h3 style="margin-top:0">大乐透</h3>
+<ul style="margin:6px 0">
+<li>单注奖金中位 <b>10,000,000 元</b>（中位数即顶格）</li>
+<li>触顶 <b class="bad">867 / 1493 期
+= 58.1%</b></li>
+<li>只有约 <b>42%</b> 的期数里冷门有意义</li>
+</ul>
+</div>
+</div>
+
+<h3>为什么“冷门”值得做：一张曲线说清楚</h3>
+<p>设某组合的预计同奖人数为 λ（除你以外还有 λ 个人买中）。
+你能拿到的奖金份额是 1/(1+C)，C 服从均值 λ 的泊松分布，
+所以期望份额 = (1 − e<sup>−λ</sup>)/λ。这条曲线随 λ 单调下降——<b>这就是冷门策略的全部数学内容</b>。</p>
+<svg viewBox="0 0 680 230" width="100%" role="img"><line x1="52.0" y1="18" x2="52.0" y2="188" stroke="#eef2f9"/><text x="52.0" y="210" font-size="9" fill="#9aa7bd" text-anchor="middle">0</text><line x1="174.0" y1="18" x2="174.0" y2="188" stroke="#eef2f9"/><text x="174.0" y="210" font-size="9" fill="#9aa7bd" text-anchor="middle">10</text><line x1="296.0" y1="18" x2="296.0" y2="188" stroke="#eef2f9"/><text x="296.0" y="210" font-size="9" fill="#9aa7bd" text-anchor="middle">20</text><line x1="418.0" y1="18" x2="418.0" y2="188" stroke="#eef2f9"/><text x="418.0" y="210" font-size="9" fill="#9aa7bd" text-anchor="middle">30</text><line x1="540.0" y1="18" x2="540.0" y2="188" stroke="#eef2f9"/><text x="540.0" y="210" font-size="9" fill="#9aa7bd" text-anchor="middle">40</text><line x1="662.0" y1="18" x2="662.0" y2="188" stroke="#eef2f9"/><text x="662.0" y="210" font-size="9" fill="#9aa7bd" text-anchor="middle">50</text><line x1="52" y1="162.2" x2="662" y2="162.2" stroke="#eef2f9"/><text x="46" y="165" font-size="9" fill="#9aa7bd" text-anchor="end">0.10</text><line x1="52" y1="110.7" x2="662" y2="110.7" stroke="#eef2f9"/><text x="46" y="114" font-size="9" fill="#9aa7bd" text-anchor="end">0.30</text><line x1="52" y1="59.2" x2="662" y2="59.2" stroke="#eef2f9"/><text x="46" y="62" font-size="9" fill="#9aa7bd" text-anchor="end">0.50</text><line x1="52" y1="33.5" x2="662" y2="33.5" stroke="#eef2f9"/><text x="46" y="36" font-size="9" fill="#9aa7bd" text-anchor="end">0.60</text><path d="M59.3,-5.7 L59.6,-3.4 L60.0,-1.0 L60.4,1.5 L60.7,4.0 L61.1,6.6 L61.5,9.3 L62.0,12.0 L62.4,14.7 L62.9,17.6 L63.4,20.4 L63.9,23.4 L64.4,26.4 L65.0,29.4 L65.6,32.5 L66.2,35.6 L66.8,38.8 L67.5,42.0 L68.2,45.3 L68.9,48.6 L69.7,51.9 L70.4,55.2 L71.3,58.6 L72.1,61.9 L73.1,65.3 L74.0,68.7 L75.0,72.1 L76.0,75.5 L77.1,78.8 L78.2,82.2 L79.4,85.5 L80.6,88.8 L81.9,92.1 L83.3,95.3 L84.7,98.5 L86.2,101.6 L87.7,104.7 L89.3,107.7 L91.0,110.7 L92.7,113.6 L94.6,116.4 L96.5,119.2 L98.5,121.9 L100.6,124.5 L102.8,127.1 L105.1,129.5 L107.4,131.9 L109.9,134.2 L112.5,136.5 L115.3,138.6 L118.1,140.7 L121.1,142.7 L124.2,144.6 L127.5,146.4 L130.8,148.2 L134.4,149.9 L138.1,151.5 L142.0,153.1 L146.0,154.6 L150.3,156.0 L154.7,157.4 L159.3,158.7 L164.1,160.0 L169.2,161.2 L174.4,162.3 L180.0,163.4 L185.7,164.5 L191.7,165.5 L198.0,166.5 L204.6,167.4 L211.5,168.3 L218.6,169.1 L226.1,170.0 L234.0,170.7 L242.2,171.5 L250.7,172.2 L259.7,172.9 L269.0,173.5 L278.8,174.1 L289.0,174.7 L299.6,175.3 L310.8,175.9 L322.4,176.4 L334.6,176.9 L347.3,177.4 L360.6,177.8 L374.5,178.3 L389.0,178.7 L404.2,179.1 L420.0,179.5 L436.6,179.8 L453.9,180.2 L472.0,180.5 L490.9,180.8 L510.6,181.1 L531.2,181.4 L552.8,181.7 L575.3,182.0 L598.9,182.3 L623.5,182.5 L649.2,182.7" fill="none" stroke="#2b3a55" stroke-width="2"/><circle cx="175.1" cy="162.5" r="4" fill="#68738a"/><line x1="175.1" y1="162.5" x2="175.1" y2="140.5" stroke="#68738a" stroke-width="1" stroke-dasharray="2 2"/><text x="175.1" y="136.5" font-size="10" fill="#68738a" text-anchor="middle" font-weight="600">平均组合 λ=10.1 → 0.098</text><circle cx="76.4" cy="76.6" r="4" fill="#2f6fd0"/><line x1="76.4" y1="76.6" x2="76.4" y2="42.6" stroke="#2f6fd0" stroke-width="1" stroke-dasharray="2 2"/><text x="76.4" y="38.6" font-size="10" fill="#2f6fd0" text-anchor="middle" font-weight="600">冷门组合 λ=2 → 0.432</text><circle cx="418.0" cy="179.4" r="4" fill="#d9534f"/><line x1="418.0" y1="179.4" x2="418.0" y2="149.4" stroke="#d9534f" stroke-width="1" stroke-dasharray="2 2"/><text x="418.0" y="145.4" font-size="10" fill="#d9534f" text-anchor="middle" font-weight="600">热门组合 λ=30</text><text x="52" y="226" font-size="9.5" fill="#68738a">预计同奖人数 λ（人）</text><text x="662" y="28" font-size="9.5" fill="#68738a" text-anchor="end">纵轴：每 1 元奖金的期望到手份额</text></svg>
+<p class="cap">横轴是预计同奖人数，纵轴是每 1 元奖金的期望到手份额。
+平均组合 λ≈10.1，份额约 0.098；冷门组合 λ=2 时份额 0.432，
+<b>相差 4.4 倍</b>。这个倍数全部作用在浮动奖上，与中奖概率无关。</p>
+
+<h2>三、能优化与不能优化的边界</h2>
+
+<p>把前面所有证据收拢，选号这件事可以清楚地分成两半。2.0 的设计原则是：
+<b>绝不承诺左边，全力做好右边</b>。</p>
+
+<table>
+<thead><tr><th style="width:24%">维度</th><th style="width:12%">能否改变</th>
+<th style="width:34%">证据</th><th>2.0 的处理</th></tr></thead>
+<tbody>
+<tr><td>单注中奖概率</td><td><b class="bad">不能</b></td>
+<td>一等奖恒为 1/17,721,088（双色球）、1/21,425,712（大乐透），
+与选什么号无关</td>
+<td>明确写在界面上，不做任何暗示</td></tr>
+
+<tr><td>号码“该出哪个”</td><td><b class="bad">不能</b></td>
+<td>均匀性检验 p = 0.49；冷热号回测命中率与随机无差异（z = 0.24 / 0.29）</td>
+<td>删除一切“下期预测”，改为“历史描述”</td></tr>
+
+<tr><td>号码均匀性偏差</td><td><b class="bad">不能</b></td>
+<td>和值/跨度/AC/连号/奇偶/三区的实测分布与穷举理论分布一致</td>
+<td>结构约束只用于“让号码看起来正常”，不声称提高概率</td></tr>
+
+<tr><td><b>预计同奖人数</b></td><td><b class="good">能</b></td>
+<td>离散指数 D = 11.1（p &lt; 1e-300）；
+组合受欢迎度 CV = 1.00；形态特征 LR 检验 p 1.6×10<sup>-66</sup></td>
+<td><b>核心新功能</b>：给每个组合算 λ 与期望份额，按冷门度排序</td></tr>
+
+<tr><td><b>有限预算的覆盖效率</b></td><td><b class="good">能</b></td>
+<td>覆盖设计有严格数学保证：n 注可保证任意 t 个号至少命中一次</td>
+<td>新增“胆拖 + 保底覆盖”模式，明确标注保证级别</td></tr>
+
+<tr><td>封顶带来的收益上限</td><td><b class="bad">不能</b></td>
+<td>双色球 19.0% 期触顶、大乐透
+58.1% 期触顶</td>
+<td>冷门度面板直接显示“本期是否触顶”，触顶时提示收益被截断</td></tr>
+</tbody></table>
+
+<div class="callout">
+<b>一句话总结：</b>选号能改变的只有“中奖时和别人分多少”，
+改变不了“能不能中”。前者值得做成产品核心，后者应该被诚实地关掉。
+</div>
+
+<h2>四、2.0 方案：五个模块</h2>
+
+<table>
+<thead><tr><th style="width:20%">模块</th><th style="width:26%">1.0 现状</th>
+<th style="width:30%">2.0 目标</th><th>依据</th></tr></thead>
+<tbody>
+<tr><td><b>① 冷门度引擎</b><br><span class="tag green">新增</span></td>
+<td>只有“避开生日号”一条硬规则</td>
+<td>每个组合输出：预计同奖人数 λ、期望到手份额、冷门度分位；
+支持按冷门度排序取号</td>
+<td>D = 11.1 的实测校准 + 形态回归系数</td></tr>
+
+<tr><td><b>② 覆盖设计</b><br><span class="tag blue">升级</span></td>
+<td>贪心覆盖 t-子集，注间重合上限</td>
+<td>胆拖 + 保底覆盖：给定号码池与注数，
+保证“任意 t 个号至少中一次”，并标注保证级别与对应的成本</td>
+<td>La Jolla 覆盖表 + CoveringDesignBuilder 的构造方法</td></tr>
+
+<tr><td><b>③ 回测台账</b><br><span class="tag green">新增</span></td>
+<td>无</td>
+<td>每次生成的号码落本地台账；开奖后自动对账，
+输出“实际命中 vs 随机基线”与累计投入产出。
+<b>目的不是证明有效，而是持续验证它没有比随机更好</b></td>
+<td>LottoLab 的预测复盘闭环</td></tr>
+
+<tr><td><b>④ 诚实统计层</b><br><span class="tag blue">升级</span></td>
+<td>报告里有 p 值，但分散</td>
+<td>每个结论旁边标注：检验方法、统计量、p 值、多重比较校正阈值、
+样本量与作用范围；被证伪的功能保留在“已排除”清单里</td>
+<td>Haigh / Stern &amp; Cover 的立场 + LottoLab 的做法</td></tr>
+
+<tr><td><b>⑤ 可复现性</b><br><span class="tag green">新增</span></td>
+<td>脚本可跑，但没记录</td>
+<td>每次生成记录随机种子、数据版本、代码指纹，可导出 JSON 复核</td>
+<td>科研报告的基本要求</td></tr>
+</tbody></table>
+
+<h2>五、明确不做的事</h2>
+<div class="card">
+<ol style="margin:0">
+<li><b>不做号码预测。</b>LSTM/Transformer/随机森林在彩票上没有可用的信号，
+我们的回测已经证明冷热号与随机无差异。做出来只会误导。</li>
+<li><b>不做“必中”“高胜率”话术。</b>中奖概率是固定的，任何随号码变化的“胜率”
+都是把条件概率和边际概率混为一谈。</li>
+<li><b>不引入“图案理论”（Gianella 那套）。</b>它声称组合概率不均等，
+与我们穷举整个组合空间得到的精确分布矛盾。</li>
+<li><b>不把号码偏好做成“杀号”。</b>单号码效应在 Bonferroni 校正后不显著，
+只有组合级排序才站得住。</li>
+</ol>
+</div>
+
+<h2>六、实施路径</h2>
+<table>
+<thead><tr><th style="width:8%">步骤</th><th style="width:26%">做什么</th>
+<th style="width:36%">产出</th><th>验收标准</th></tr></thead>
+<tbody>
+<tr><td><b>1</b></td><td>固化统计核心 <span class="tag green">已完成</span></td>
+<td><code>analysis_v2.py</code> → <code>stats_v2.json</code></td>
+<td>两个彩种的 D、CV、LR 检验数值可复现</td></tr>
+<tr><td><b>2</b></td><td>冷门度引擎 + 界面 <span class="tag green">已完成</span></td>
+<td><code>build_model.py</code> → <code>model_v2.json</code> →
+<code>lottery-pro-v2.html</code> → 桌面 EXE</td>
+<td>给定组合能算出 λ；冷门档位严格单调降低 λ</td></tr>
+<tr><td><b>3</b></td><td>覆盖设计 + 回测台账 <span class="tag green">部分完成</span></td>
+<td>轮转设计（9 号池 12 注保证 4 红）与"中奖率实验室"已完成；
+回测台账、可复现导出仍待做</td>
+<td>覆盖保证可验证（已用穷举验证）；台账能对上最新开奖</td></tr>
+<tr><td><b>4</b></td><td>5 日开奖 + 每周迭代 <span class="tag green">已完成</span></td>
+<td><code>fetch_recent.py</code> → <code>recent.json</code>；
+<code>iterate.py</code> 每周同步、选型、重估、重建</td>
+<td>开奖页能显示四彩种近 5 日数据；迭代日志逐次可查（详见第八章）</td></tr>
+</tbody></table>
+
+<h3>第 2 步的自测结果</h3>
+<p class="note">双色球、5 注、开启结构约束，一次抽样（<code>node _t2.js</code>）。
+生成器带随机性，每次数值会小幅波动，但档位次序恒定。</p>
+<table>
+<thead><tr><th>档位</th><th>平均同奖人数 λ</th><th>相对随机的奖金份额</th>
+<th>含义</th></tr></thead>
+<tbody>
+<tr><td>随机基准</td><td>9.53 人</td><td>1.06×</td>
+<td>对照用：与人群平均选号重合</td></tr>
+<tr><td>偏冷门</td><td>5.71 人</td><td>1.76×</td>
+<td>在候选池里挑较冷的，收益/温和</td></tr>
+<tr><td>极冷门</td><td>4.41 人</td><td>2.26×</td>
+<td>3000 次抽样取最冷，方差也最大</td></tr>
+</tbody></table>
+<p class="note">四项工程细节，都写进了代码注释：<b>①</b> 结构约束取历史 P10–P90
+（双色球和值 74–128、跨度 17–30；大乐透 59–117、跨度 15–31），避免为了冷门
+把号码推到没人买但也几乎不可能开出的形态；<b>②</b> 多注之间限制重叠
+（<code>k−4</code>），否则 5 注会退化成同一张票的 5 个副本；<b>③</b>
+冷门度分位表按 0.1% 粒度用 30 万次 Monte Carlo 标定，顶格时如实显示
+"99.9% 以上"而不是伪造精度；<b>④</b> 单注收益按
+(1−e<sup>−λ</sup>)/λ 折算，界面同时标注该彩种的封顶期数占比——封顶之后
+冷门不产生任何额外收益。</p>
+
+<p class="note">本报告里的所有数字都来自
+<code>analysis_v2.py</code> 对 <code>data/ssq_prize.json</code> 与
+<code>data/dlt_prize.json</code> 的计算，可原样重跑复核。
+第三步（覆盖设计、台账、可复现导出）尚未动工，属于"让多注组合更省"和
+"验证到底准不准"的部分，不影响当前版本的使用。</p>
+
+<h2>七、中奖率到底能不能提高</h2>
+<div class="callout">
+把双色球全部 <b>1,107,568</b> 种红球开奖组合穷举一遍，答案分成两半：
+<b>单注中奖率一动不动</b>（6.71%，一等奖 1/17,721,088），
+<b>但"同样花多少钱、能中几次"可以改</b>——改的是中奖频率与中奖金额之间的兑换比，
+不是期望值。下面每一格都是穷举结果，不是模拟。
+</div>
+
+<h3>7.1 同样 16 元买 8 注，结构决定概率</h3>
+<table>
+<thead><tr><th style="width:30%">买法</th><th class="num">注数</th>
+<th class="num">花费</th><th class="num">至少中 3 红</th>
+<th class="num">至少中 4 红</th><th class="num">至少中 5 红</th></tr></thead>
+<tbody>
+<tr><td>分散买（每注尽量用没出现过的号）</td><td class="num">8</td>
+<td class="num">16 元</td><td class="num"><b>39.38%</b></td>
+<td class="num">3.80%</td><td class="num">0.118%</td></tr>
+<tr><td>小池轮转（8 注都取自 1–9 号）</td><td class="num">8</td>
+<td class="num">16 元</td><td class="num">17.67%</td>
+<td class="num">2.42%</td><td class="num">0.100%</td></tr>
+<tr><td>极度集中（8 注共用同 5 个号）</td><td class="num">8</td>
+<td class="num">16 元</td><td class="num">17.24%</td>
+<td class="num">2.10%</td><td class="num">0.087%</td></tr>
+</tbody></table>
+<p class="note">同样 16 元，分散买"至少中 3 红"的概率是集中买的
+<b>2.3 倍</b>。代价是：集中的买法一旦撞上，往往多注同时中，
+奖金更集中——这就是全部的可优化空间。</p>
+
+<h3>7.2 中奖率的真正主力是蓝球</h3>
+<p>双色球任意奖 6.71% 里，5.89 个百分点来自六等奖（蓝球命中即中 5 元），占 87.8%。
+所以"想经常中"最有效的动作是<b>买不同的蓝球</b>：买 n 个不同蓝球，
+"至少中一次（≥5 元）"的概率下限就是 n/16，红球中了只会更高——而且这一档与红球怎么选完全无关。</p>
+<table>
+<thead><tr><th class="num">买几个蓝球</th><th class="num">蓝球保底中奖率</th>
+<th class="num">成本</th><th class="num">保底回收</th><th>代价</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">6.25%</td><td class="num">2 元</td><td class="num">5 元</td>
+<td>与随便买一注无异</td></tr>
+<tr><td class="num">4</td><td class="num">25.00%</td><td class="num">8 元</td><td class="num">5 元</td>
+<td>四分之一的机会至少回 5 元</td></tr>
+<tr><td class="num">8</td><td class="num">50.00%</td><td class="num">16 元</td><td class="num">5 元</td>
+<td>一半的机会，但常常只是回 5 元</td></tr>
+<tr><td class="num">12</td><td class="num">75.00%</td><td class="num">24 元</td><td class="num">5 元</td>
+<td>保底返奖率降到 21%</td></tr>
+<tr><td class="num">16</td><td class="num"><b>100%</b></td><td class="num">32 元</td><td class="num">5 元</td>
+<td>必中，但 <b>必亏 27 元</b>——"每次中"和"能赚钱"是两件事</td></tr>
+</tbody></table>
+
+<h3>7.3 轮转设计：用 12 注买下复式 84 注的保证</h3>
+<p>如果目标不是"多中几次"，而是"号码池看准了就别落空"，用轮转（covering design）：
+从 9 个号里选 6 个，复式要买全部 <b>84</b> 注（168 元）；
+轮转设计只需 <b>12</b> 注（24 元），
+保证的事情完全相同——开奖号里有 4 个落在你的 9 个号中，就一定有一注中 4 红。
+两者的 4 红命中率都是 <b>3.42%</b>，成本差 7 倍。</p>
+<p class="note">代价同样要讲清楚：轮转不保证 3 红（18.77%），
+低于分散买的 39.38%。轮转是"池子准了就一定有收获"，不是"更容易中小奖"。</p>
+
+<h3>7.4 换玩法 = 换档位</h3>
+<table>
+<thead><tr><th style="width:26%">玩法</th><th class="num">每 2 元中奖率</th>
+<th class="num">中奖几率</th><th class="num">固定奖返奖率</th><th class="num">组合空间</th></tr></thead>
+<tbody>
+<tr><td>双色球</td><td class="num"><b>6.71%</b></td>
+<td class="num">1/14.9</td><td class="num">24.3%</td><td class="num">17,721,088</td></tr>
+<tr><td>大乐透</td><td class="num"><b>6.67%</b></td>
+<td class="num">1/15.0</td><td class="num">27.3%</td><td class="num">21,425,712</td></tr>
+<tr><td>福彩 3D 组选 6</td><td class="num">0.60%</td>
+<td class="num">1/167</td><td class="num">52.0%</td><td class="num">1,000</td></tr>
+<tr><td>排列 5</td><td class="num">0.0010%</td>
+<td class="num">1/100,000</td><td class="num">50.0%</td><td class="num">100,000</td></tr>
+</tbody></table>
+<p class="note">乐透型的中奖率高，是因为 5 元档太容易；数字型的返奖率高，
+是因为钱几乎全在固定奖里、没有大奖池稀释。要中奖频次选乐透型的蓝球，
+要返奖率选数字型，要中奖金额——两样都救不了你。</p>
+
+<div class="callout">
+<b>所以最终结论是：</b>中奖率可以"提高"，但提高的只有
+<i>频率</i>（分散买、多买蓝球、换低赔率玩法），代价必然是<i>单次金额</i>变小；
+期望回收永远是 24.3%（双色球）/27.3%（大乐透）。冷门度引擎解决的是另一个问题——
+<b>中奖之后能分到多少</b>，它一点都不改变中奖率，这两件事不能混着卖。
+</div>
+
+<h2>八、数据怎么保持新鲜：5 日开奖与每周迭代</h2>
+
+<p>模型再好，数据一停就变成历史文档。这一版加了两件事：一是<b>能看</b>——
+程序里直接显示最近 5 天的开奖；二是<b>能自己长</b>——每周按最新数据重估一遍。</p>
+
+<h3>8.1 五个数据源，四个都在发行机构自己的域名上</h3>
+<table>
+<thead><tr><th style="width:14%">彩种</th><th style="width:26%">接口</th>
+<th style="width:22%">抓什么</th><th>频率</th></tr></thead>
+<tbody>
+<tr><td>双色球</td><td><code>cwl.gov.cn</code> 开奖公告接口</td>
+<td>号码、销售额、奖池、各奖级注数与奖金</td><td>每周二/四/日</td></tr>
+<tr><td>大乐透</td><td><code>webapi.sporttery.cn</code> 历史开奖</td>
+<td>前区/后区、销量、奖池、奖级明细</td><td>每周一/三/六</td></tr>
+<tr><td>福彩3D</td><td><code>cwl.gov.cn</code> 开奖公告接口</td>
+<td>三位号码、销售额（该彩种不返回奖级注数）</td><td>每天</td></tr>
+<tr><td>排列5</td><td><code>webapi.sporttery.cn</code> 历史开奖</td>
+<td>五位号码、销量、一等奖注数</td><td>每天</td></tr>
+</tbody></table>
+
+<p class="note">为什么不图省事用一个第三方聚合站？因为这些数字最终要拿来算钱
+（销售额决定注数，注数决定 λ），聚合站只要有一个字段的口径不同，整套推断就歪了。
+接口返回什么就显示什么，字段缺失的地方如实显示"不设一等奖"，不用占位数字凑齐表格。</p>
+
+<p>「开奖」页的刷新分三层，保证任何一层坏掉都还有东西看：</p>
+<table>
+<thead><tr><th style="width:16%">层级</th><th style="width:30%">来源</th><th>刷新时机</th></tr></thead>
+<tbody>
+<tr><td>现场抓取</td><td>官方接口（2 次重试，12 秒超时）</td><td>点「立即刷新」</td></tr>
+<tr><td>本地缓存</td><td><code>%LOCALAPPDATA%\LotteryPicker\recent.json</code></td>
+<td>每次启动优先读它，比打包快照新</td></tr>
+<tr><td>内置快照</td><td>打包进 EXE 的 <code>recent.json</code></td>
+<td>前两层都没有时兜底，界面标注抓取时间</td></tr>
+</tbody></table>
+
+<h3>8.2 每周迭代：六个步骤，两处防止自己骗自己</h3>
+
+<p><code>iterate.py</code> 每周跑一次，流程是：同步数据 → 重算统计 → 选模型形态 →
+全量重拟合 → 漂移检验 → 重建页面与 EXE，并把每次结果追加进
+<code>updates/迭代日志.md</code>。真正需要想清楚的是中间两处。</p>
+
+<div class="callout">
+<p><b>第一处：新数据该不该参与"选模型"。</b>
+双色球 5 天只有 2 期、福彩3D 5 天只有 5 期，用这么点数据去挑模型形态，
+挑出来的一定是噪声。所以选型用的是<b>最近 600 期切成 3 段的滚动留出</b>：
+每段用其之前的全部历史训练、在该段上打分，三种形态（仅号码哑变量 / 仅形态 /
+两者）按总偏差比较。单段 240 期的旧方法确实会翻车——第一次试跑时它把形态
+判给了"仅号码哑变量"，换三段滚动后立刻回到"号码+形态"，说明那 2% 的改善是噪声。</p>
+<p><b>第二处：λ 的水平要不要"校准"。</b>
+不能。因为 E[一等奖注数] = 注数 / 组合空间 与人们怎么选号<b>无关</b>，
+它由销售额唯一决定；近期均值偏低只是过离散噪声（双色球离散指数 D≈10，
+60 期的标准误约 1.4 注）。第一版迭代器用"对数比几何均值"做过一次收缩校准，
+结果把 μ 压到 0.79 倍——那是把"很多期 0 注"误当成了水平下降。
+现在这层改名为<b>漂移检验</b>：只算 z 值、只报警、不动参数。实测双色球近 60 期
+8.10 注 vs 预测 9.72 注，z = −1.3，落在正常范围。</p>
+</div>
+
+<table>
+<thead><tr><th style="width:8%">步</th><th style="width:20%">做什么</th>
+<th style="width:34%">关键约束</th><th>失败时会怎样</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>增量同步开奖</td><td>整表重抓（自愈），单彩种失败不阻塞</td>
+<td>沿用本地数据，日志留一条提示</td></tr>
+<tr><td>2</td><td>重算 D / CV / 检验</td><td>与图表数字同源</td><td>中止并保留上一版</td></tr>
+<tr><td>3</td><td>三段滚动选型</td><td>改善不足 3% 一律维持 <code>full</code></td><td>维持原形态</td></tr>
+<tr><td>4</td><td>全量重拟合</td><td>30 万次 Monte Carlo 重新归一化</td><td>中止</td></tr>
+<tr><td>5</td><td>漂移检验</td><td>|z| &gt; 3 只告警，不改 μ</td><td>日志标黄，等人工判断</td></tr>
+<tr><td>6</td><td>重建 HTML / 报告 / EXE</td><td>版本号自动 +1（2.2.x）</td><td>页面与报告已更新，EXE 保持旧版</td></tr>
+</tbody></table>
+
+<p class="note">每次迭代都会记下<b>权重稳定性</b>：新旧 35 个号码 β 的 Spearman
+秩相关与最大单号漂移。第 1 次迭代的读数是大乐透 1.000 / 0.000（数据未变）、
+双色球 0.955 / 0.124（当次修掉了一个 33 号与形态列撞列的设计缺陷，所以有一个
+实质变化）。这项读数低于 0.9 就说明模型在跳，需要回头查数据而不是直接发布。</p>
+
+<h3>8.3 一句实话</h3>
+<p>每周迭代能让模型<b>不失真</b>，但不能让它<b>越来越准</b>。原因在前面已经给过：
+号码本身均匀随机，冷门度只影响中奖后分多少，不影响中不中。所以周迭代的目标是
+"参数逐年漂移时仍跟得上"，不是"下周中奖概率更高"。任何声称能做到后者的更新，
+都是在卖希望。</p>
+
+<h2>九、参考文献</h2>
+<ol class="ref">
+<li>Stern, H. &amp; Cover, T. M. (1989). Maximum Entropy and the Lottery.
+<i>Journal of the American Statistical Association</i>, 84(408), 980–985.</li>
+<li>Haigh, J. (1997). The Statistics of the National Lottery.
+<i>Journal of the Royal Statistical Society: Series A</i>, 160(2), 187–206.</li>
+<li>Farrell, L., Hartley, R., Lanot, G. &amp; Walker, I. (2000).
+The Demand for Lotto: The Role of Conscious Selection.
+<i>Journal of Business &amp; Economic Statistics</i>, 18(2), 228–241.</li>
+<li>Cox, S. J., Daniell, G. J. &amp; Nicole, D. A. (1997).
+Using Maximum Entropy to Double One's Expected Winnings in the UK National Lottery.
+<i>Journal of the Royal Statistical Society: Series D</i>.</li>
+<li>Ziemba, W. T., Brumelle, S. L., Gautier, A. &amp; Schwartz, S. L. (1986).
+<i>Dr Z's 6/49 Lotto Guidebook</i>. Dr Z Investments.</li>
+<li>Henze, N. &amp; Riedwyl, H. (1998). <i>How to Win More: Strategies for
+Increasing a Lottery Win</i>. A K Peters.</li>
+<li>Gordon, D. M. La Jolla Covering Repository（覆盖设计最优记录表）.</li>
+</ol>
+
+<div class="foot">
+本报告只做统计描述，不含投注建议。彩票是负期望的娱乐消费，
+任何选号方法都不能提高中奖概率；本报告讨论的“冷门度”只影响中奖时的奖金分摊。
+</div>
+
+</div></body></html>

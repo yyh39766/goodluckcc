@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>智能选号器 2.0</title>
+<style>
+:root{
+  --ink:#111827; --ink2:#374151; --muted:#6b7280; --line:#e5e9f2;
+  --bg:#f4f6fb; --card:#fff; --red:#cf3a33; --redsoft:#fdf3f2; --blue:#2f6fd0;
+  --bluesoft:#f2f7fe; --green:#15803d; --amber:#b45309;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14.5px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+  "Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+.wrap{max-width:1160px;margin:0 auto;padding:18px 20px 40px}
+
+/* ---------- 顶栏 ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;padding:6px 0 16px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{position:relative;width:42px;height:42px;flex:0 0 42px}
+.logo .b{position:absolute;display:grid;place-items:center;border-radius:50%;
+  color:#fff;font-weight:700;font-size:15px;box-shadow:inset 0 -2px 4px rgba(0,0,0,.18)}
+.logo .r{width:30px;height:30px;left:0;top:0;
+  background:radial-gradient(circle at 32% 28%,#f3726c,#c62828)}
+.logo .b2{width:22px;height:22px;right:0;bottom:0;font-size:12px;
+  background:radial-gradient(circle at 32% 28%,#6ea3f0,#1e4fa8)}
+h1{font-size:19px;margin:0;letter-spacing:-.01em;display:flex;align-items:baseline;gap:7px}
+h1 em{font-style:normal;font-size:12px;font-weight:700;color:#fff;background:var(--ink);
+  padding:1px 7px;border-radius:20px;letter-spacing:.02em}
+.sub{margin:2px 0 0;font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:4px;background:#e9edf6;padding:4px;border-radius:11px}
+.topright{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.tabs button{border:0;background:transparent;padding:7px 16px;border-radius:8px;
+  font-size:13.5px;color:var(--ink2);cursor:pointer;font-weight:500;transition:.15s}
+.tabs button.on{background:#fff;color:var(--ink);font-weight:600;
+  box-shadow:0 1px 3px rgba(16,24,40,.1)}
+.repbtn{display:none;border:1px solid var(--line);background:#fff;color:var(--ink2);
+  padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer;font-weight:500;
+  transition:.15s;white-space:nowrap}
+.repbtn:hover{color:var(--ink);border-color:#c9d2e4}
+
+/* ---------- 通用 ---------- */
+.tab{display:none}
+.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.grid{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+.lbl{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.04em;
+  margin:0 0 8px}
+.lbl:not(:first-child){margin-top:18px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;
+  font-size:13px;color:var(--ink2);cursor:pointer;transition:.14s}
+.chip:hover{border-color:#c7d2e6}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:500}
+.chip small{display:block;font-size:10.5px;color:var(--muted);font-weight:400;
+  margin-top:1px;line-height:1.35}
+.chip.on small{color:rgba(255,255,255,.66)}
+.gen{width:100%;margin-top:18px;border:0;border-radius:10px;padding:12px;
+  background:linear-gradient(180deg,#e04a43,#c62828);color:#fff;font-size:15px;
+  font-weight:600;cursor:pointer;letter-spacing:.02em;
+  box-shadow:0 2px 8px rgba(198,40,40,.24);transition:.15s}
+.gen:hover{filter:brightness(1.05)}
+.gen:active{transform:translateY(1px)}
+.gen:disabled{opacity:.55;cursor:default}
+.mini{width:100%;margin-top:8px;border:1px solid var(--line);background:#fff;
+  border-radius:9px;padding:8px;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.mini:hover{border-color:#c7d2e6}
+.honest{margin-top:16px;padding:10px 12px;border-radius:9px;background:#fbfcfe;
+  border:1px dashed var(--line);font-size:11.5px;line-height:1.7;color:var(--muted)}
+.honest b{color:var(--ink2)}
+/* 复制是唯一的手动动作，说明就放在按钮下面 */
+.hint{margin:9px 0 0;font-size:11.5px;color:var(--muted);line-height:1.6}
+.hint b{color:var(--ink2);font-weight:600}
+/* 复制成功后弹一下：要的是「确实复制了」这一眼确认，不是按钮上的小字。
+   放在窗口下方而不是正中——刚生成的号码就在中间，弹窗不该盖住它。 */
+#pop{position:fixed;left:50%;bottom:24px;transform:translate(-50%,12px);z-index:120;
+  background:#1e2637;color:#fff;border-radius:14px;padding:15px 26px;text-align:center;
+  box-shadow:0 18px 44px rgba(16,24,40,.3);opacity:0;pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease;max-width:78vw}
+#pop.on{opacity:1;transform:translate(-50%,0)}
+#pop b{display:block;font-size:14.5px;font-weight:600}
+#pop span{display:block;margin-top:5px;font-size:11.5px;color:#c9d2e0}
+#pop.err{background:#b3352c}
+#pop.err span{color:#f6dcda}
+
+/* ---------- 结果 ---------- */
+.res-head{display:flex;align-items:baseline;justify-content:space-between;
+  gap:10px;margin-bottom:12px}
+.res-head h2{font-size:15.5px;margin:0;font-weight:600}
+.res-head .meta{font-size:12px;color:var(--muted)}
+.bet{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #f1f4f9;
+  animation:pop .34s ease both}
+.bet:last-child{border-bottom:0}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.idx{width:20px;flex:0 0 20px;font-size:11.5px;color:#9aa7bd;
+  font-variant-numeric:tabular-nums;padding-top:8px}
+.body{flex:1;min-width:0}
+.balls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ball{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;font-weight:700;font-size:13.5px;font-variant-numeric:tabular-nums;
+  text-shadow:0 1px 1px rgba(0,0,0,.18);flex:0 0 31px}
+.ball.r{background:radial-gradient(circle at 32% 26%,#f4736c,#c62828);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
+.ball.b{background:radial-gradient(circle at 32% 26%,#6ea3f0,#1e4fa8);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
+.plus{color:#c3cbdb;font-weight:600;margin:0 1px;font-size:13px}
+.feats{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.feat{font-size:11px;color:var(--muted);background:#f7f9fd;border:1px solid #eef2f9;
+  border-radius:5px;padding:1px 6px;font-variant-numeric:tabular-nums}
+.feat b{color:var(--ink2);font-weight:600}
+.feat.ok{background:#f4fbf6;border-color:#d9eddf;color:#3b7a4e}
+.feat.ok b{color:var(--green)}
+.crowdrow{display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
+.crowdrow .kv{font-size:11.5px;color:var(--muted)}
+.crowdrow .kv b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.crowdrow .kv b.good{color:var(--green)}
+.pbar{flex:1;min-width:70px;max-width:170px;height:5px;background:#eef2f9;
+  border-radius:20px;overflow:hidden;position:relative}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,#7ea6e8,#2f6fd0);
+  border-radius:20px}
+.summary{margin-top:14px;padding:12px 14px;border-radius:10px;background:#f7f9fd;
+  border:1px solid #eef2f9;display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;
+  color:var(--ink2)}
+.summary b{font-variant-numeric:tabular-nums;font-size:14px}
+.summary .warn{color:var(--amber)}
+.empty{padding:38px 0;text-align:center;color:var(--muted);font-size:13px}
+.empty b{display:block;color:var(--ink2);font-size:14.5px;margin-bottom:5px}
+
+/* ---------- 数据页 ---------- */
+.sec{margin-bottom:16px}
+.sec h3{font-size:14px;margin:0 0 4px;font-weight:600}
+.sec p.desc{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.65}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 8px;border-bottom:1px solid #f1f4f9;text-align:left}
+th{font-size:11px;color:var(--muted);font-weight:600;background:#fafbfe}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th.num{text-align:right}
+tr:last-child td{border-bottom:0}
+.hot{color:var(--red);font-weight:600}
+.cold{color:var(--blue);font-weight:600}
+.muted{color:var(--muted)}
+.pill{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:20px;
+  border:1px solid var(--line);color:var(--muted);background:#fafbfe}
+.pill.no{color:var(--red);border-color:#f2d5d3;background:var(--redsoft)}
+.pill.yes{color:var(--green);border-color:#d3e9d8;background:#f4fbf6}
+twocol{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi div{background:#fafbfe;border:1px solid #eef2f9;border-radius:9px;padding:10px 12px}
+.kpi .v{font-size:19px;font-weight:700;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.kpi .k{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
+/* ---------- 中奖率页 ---------- */
+.facts{display:grid;gap:9px;margin:4px 0 2px}
+.facts div{display:flex;gap:9px;font-size:13px;line-height:1.65;color:var(--ink2)}
+.facts i{flex:0 0 19px;height:19px;border-radius:50%;background:#eef2f9;color:var(--ink2);
+  font-style:normal;font-size:11px;font-weight:700;display:grid;place-items:center;margin-top:1px}
+.facts b{color:var(--ink)}
+.rangerow{display:flex;align-items:baseline;justify-content:space-between;
+  font-size:12px;color:var(--muted);margin:10px 0 4px}
+.rangerow b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:#c62828;height:22px;cursor:pointer}
+.wheeltx{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;
+  font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.wheeltx span{background:#f7f9fd;border:1px solid #eef2f9;border-radius:6px;
+  padding:3px 6px;text-align:center;letter-spacing:.04em}
+.cmp{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12.5px;
+  align-items:baseline;margin:8px 0 0}
+.cmp .k{color:var(--muted)}
+.cmp .v{font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+.foot{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.8;
+  border-top:1px solid var(--line);padding-top:12px}
+/* 开奖页 */
+.rechead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.recacts{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.recstat{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.recstat.ok{color:#1a7f4b}
+.recstat.err{color:#c62828}
+.drawgrp{margin-top:16px}
+.drawgrp:first-of-type{margin-top:10px}
+.dgrphead{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.dgrphead b{font-size:13px;color:var(--ink)}
+.dgrphead span{font-size:11px;color:var(--muted)}
+.drow{display:grid;grid-template-columns:104px 1fr 86px 92px 84px;gap:10px;
+  align-items:center;padding:7px 2px;border-bottom:1px solid #f4f6fa;font-size:12px}
+.dissue b{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.dissue span{display:block;font-size:11px;color:var(--muted);margin-top:1px}
+.dnum{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.dball{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;flex:0 0 26px;
+  text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.dball.r{background:radial-gradient(circle at 32% 26%,#f4736c,#c62828);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
+.dball.b{background:radial-gradient(circle at 32% 26%,#6ea3f0,#1e4fa8);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
+.ddigit{min-width:25px;height:27px;padding:0 6px;border-radius:6px;display:grid;place-items:center;
+  background:#eef2f9;border:1px solid #e3e9f4;color:var(--ink);font-weight:700;font-size:12.5px;
+  font-variant-numeric:tabular-nums}
+.dcell{text-align:right}
+.dcell b{display:block;color:var(--ink);font-variant-numeric:tabular-nums}
+.dcell span{font-size:10.5px;color:var(--muted)}
+.dcell.hot b{color:#c62828}
+@media(max-width:880px){
+  .grid{grid-template-columns:1fr}
+  .two{grid-template-columns:1fr}
+  .kpi{grid-template-columns:repeat(2,1fr)}
+  .wrap{padding:12px 12px 30px}
+  h1{font-size:17px}
+  .drow{grid-template-columns:88px 1fr;row-gap:3px}
+  .dcell{display:none}
+  .rechead{flex-direction:column}
+}
+</style>
+<!-- 手机壳注入：开奖快照 + 原生桥 -->
+<script>window.__APP_VERSION__="2.2.0";
+window.__BUNDLED_RECENT={"fetched_at":"2026-10-30 08:07:13","days":5,"window":{"from":"2026-10-26","to":"2026-10-30"},"items":[{"game":"ssq","issue":"2026124","date":"2026-10-29","nums":[3,11,17,22,23,29],"extra":[9],"sales":346568144.0,"pool":1075698427.0,"first_count":8.0,"first_money":6656899.0,"detail_url":"/c/2026/10/29/671548.shtml","name":"双色球","weekday":"周四","source":"中国福利彩票发行管理中心","digit":false},{"game":"ssq","issue":"2026123","date":"2026-10-27","nums":[4,5,20,21,26,30],"extra":[12],"sales":334118378.0,"pool":1079246630.0,"first_count":5.0,"first_money":8447916.0,"detail_url":"/c/2026/10/27/671234.shtml","name":"双色球","weekday":"周二","source":"中国福利彩票发行管理中心","digit":false},{"game":"dlt","issue":"26123","date":"2026-10-28","nums":[13,18,19,20,28],"extra":[9,11],"sales":317714615.0,"pool":731643950.16,"first_count":11.0,"first_money":5750462.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?dlt","name":"大乐透","weekday":"周三","source":"国家体育总局体育彩票管理中心","digit":false},{"game":"dlt","issue":"26122","date":"2026-10-26","nums":[2,14,21,22,24],"extra":[2,12],"sales":318170280.0,"pool":773998832.08,"first_count":7.0,"first_money":7995227.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?dlt","name":"大乐透","weekday":"周一","source":"国家体育总局体育彩票管理中心","digit":false},{"game":"fc3d","issue":"2026288","date":"2026-10-29","nums":[6,1,2],"extra":[],"sales":98279284.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/29/671549.shtml","name":"福彩3D","weekday":"周四","source":"中国福利彩票发行管理中心","digit":true},{"game":"fc3d","issue":"2026287","date":"2026-10-28","nums":[1,2,1],"extra":[],"sales":101470054.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/28/671442.shtml","name":"福彩3D","weekday":"周三","source":"中国福利彩票发行管理中心","digit":true},{"game":"fc3d","issue":"2026286","date":"2026-10-27","nums":[1,9,2],"extra":[],"sales":100468510.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/27/671235.shtml","name":"福彩3D","weekday":"周二","source":"中国福利彩票发行管理中心","digit":true},{"game":"fc3d","issue":"2026285","date":"2026-10-26","nums":[9,3,2],"extra":[],"sales":99355354.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/26/671128.shtml","name":"福彩3D","weekday":"周一","source":"中国福利彩票发行管理中心","digit":true},{"game":"pl5","issue":"26288","date":"2026-10-29","nums":[4,1,5,7,2],"extra":[],"sales":23172772.0,"pool":28892220.78,"first_count":49.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周四","source":"国家体育总局体育彩票管理中心","digit":true},{"game":"pl5","issue":"26287","date":"2026-10-28","nums":[1,5,4,4,8],"extra":[],"sales":22021184.0,"pool":22437562.5,"first_count":50.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周三","source":"国家体育总局体育彩票管理中心","digit":true},{"game":"pl5","issue":"26286","date":"2026-10-27","nums":[2,1,8,1,9],"extra":[],"sales":21857470.0,"pool":16647182.34,"first_count":199.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周二","source":"国家体育总局体育彩票管理中心","digit":true},{"game":"pl5","issue":"26285","date":"2026-10-26","nums":[6,1,3,0,0],"extra":[],"sales":22197048.0,"pool":25837022.04,"first_count":62.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周一","source":"国家体育总局体育彩票管理中心","digit":true}],"raw_count":{"ssq":30,"fc3d":30,"dlt":30,"pl5":30},"errors":[]};</script>
+<script src="bridge.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <div class="logo"><span class="b r">6</span><span class="b b2">1</span></div>
+    <div>
+      <h1>智能选号器<em id="verTag">2.2</em></h1>
+      <p class="sub" id="subLine">冷门度引擎 · 真实开奖数据 · 只降低撞号，不改变中奖概率</p>
+    </div>
+  </div>
+  <div class="topright">
+    <nav class="tabs">
+      <button data-tab="pick" class="on">选号</button>
+      <button data-tab="recent">开奖</button>
+      <button data-tab="crowd">人群偏好</button>
+      <button data-tab="lab">中奖率</button>
+      <button data-tab="proof">依据</button>
+    </nav>
+    <button id="reportBtn" class="repbtn">方案说明 ↗</button>
+  </div>
+</header>
+
+<!-- ============ 选号 ============ -->
+<section id="tab-pick" class="tab on">
+  <div class="grid">
+    <aside class="card">
+      <p class="lbl">玩法</p>
+      <div class="chips" id="gameChips"></div>
+
+      <p class="lbl">注数</p>
+      <div class="chips" id="countChips"></div>
+
+      <p class="lbl">冷门度 <span id="tierHint" class="muted" style="font-weight:400"></span></p>
+      <div class="chips" id="tierChips"></div>
+
+      <p class="lbl">结构约束</p>
+      <div class="chips" id="structChips">
+        <button class="chip on" data-v="1">和值/跨度/奇偶/AC 居中<small>让号码落在历史常见区间</small></button>
+        <button class="chip" data-v="0">关闭<small>完全随机</small></button>
+      </div>
+
+      <button class="gen" id="genBtn">生成号码</button>
+      <button class="mini" id="copyBtn">复制号码文字</button>
+      <p class="hint">生成后<b>自动复制</b>，也可点按钮再复制：<br>
+        <b>1. 05 12 19 24 28 31 + 09</b></p>
+
+      <div class="honest" id="honestBox"></div>
+    </aside>
+
+    <main class="card">
+      <div class="res-head">
+        <h2 id="resTitle">还没有生成</h2>
+        <span class="meta" id="resMeta"></span>
+      </div>
+      <div id="bets"><div class="empty"><b>点「生成号码」开始</b>
+        每注会标注预计同奖人数与奖金份额倍数</div></div>
+      <div id="summary"></div>
+    </main>
+  </div>
+</section>
+
+<!-- ============ 开奖 ============ -->
+<section id="tab-recent" class="tab">
+  <div class="card sec">
+    <div class="rechead">
+      <div>
+        <h3>近 5 日开奖</h3>
+        <p class="desc" id="recentSub" style="margin:4px 0 0">正在读取…</p>
+      </div>
+      <div class="recacts">
+        <span class="recstat" id="recentStat"></span>
+        <button class="mini" id="refreshBtn" style="margin:0">立即刷新</button>
+      </div>
+    </div>
+    <div id="recentBox"></div>
+  </div>
+
+  <div class="two">
+    <div class="card sec">
+      <h3>拿这 5 天对一遍模型</h3>
+      <p class="desc">把每期真正开出的号码代进模型，算出「预计有多少人同中一等奖」，
+      再和官方公布的一等奖注数对照。单期差得离谱是正常的（过离散），
+      所以看的是合计，而不是某一期。</p>
+      <div id="recentCalib"></div>
+    </div>
+    <div class="card sec">
+      <h3>数据出处</h3>
+      <p class="desc">四个彩种全部取自发行机构的官方接口，不经过第三方聚合站。</p>
+      <div id="recentSrc"></div>
+      <p class="desc" id="recentNext" style="margin-top:10px"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 人群偏好 ============ -->
+<section id="tab-crowd" class="tab">
+  <div class="card sec">
+    <h3>号码的大众偏好</h3>
+    <p class="desc">把每期一等奖注数当作因变量、号码是否出现当作自变量做回归，
+    系数换算成「相对平均水平的倍数」。红柱更常被人选，蓝柱更少人选。
+    这是<b>人群行为</b>的测量，不是号码预测。</p>
+    <div id="numChart"></div>
+  </div>
+
+  <div class="card sec" id="blueCard">
+    <h3>蓝球偏好（双色球）</h3>
+    <p class="desc">用六等奖注数估计——六等奖等于「蓝球命中 + 红球中 0~2 个」，
+    其数量几乎只由蓝球受欢迎程度决定，样本量上千万，是全场最强的信号。</p>
+    <div id="blueChart"></div>
+  </div>
+
+  <div class="two">
+    <div class="card sec">
+      <h3>一等奖注数分布</h3>
+      <p class="desc">若人人均匀随机选号，应服从泊松分布。实测两端被严重拉长。</p>
+      <div id="distTable"></div>
+    </div>
+    <div class="card sec">
+      <h3>为什么要看封顶</h3>
+      <p class="desc">冷门号的收益来自「少分奖池」。单注奖金一旦顶格，就分不到了。</p>
+      <div id="capBox"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 中奖率 ============ -->
+<section id="tab-lab" class="tab">
+  <div class="card sec">
+    <h3>先把话说清楚</h3>
+    <p class="desc">下面每个数字都来自<b>穷举双色球全部 1,107,568 种红球开奖组合</b>，
+    不是估算、不是模拟。想清楚"能提高什么"，才知道该优化哪一栏。</p>
+    <div id="labFacts"></div>
+  </div>
+
+  <div class="card sec">
+    <h3>同样 16 元（8 注），怎么买概率更高</h3>
+    <p class="desc">注数、金额完全相同，只是号码结构不同：分散买 = 每注尽量用没出现过的号；
+    集中买 = 8 注都从一个小号码池里出。</p>
+    <table id="stratTable"></table>
+    <p class="desc" id="stratNote"></p>
+  </div>
+
+  <div class="two">
+    <div class="card sec">
+      <h3>中奖率的主力其实是蓝球</h3>
+      <p class="desc">双色球任意奖 6.71% 里，有 5.89 个百分点是六等奖（蓝球中即中），占 87.8%。
+      想"经常中"，最有效的动作是买<b>不同的蓝球</b>，而不是研究红球。</p>
+      <div class="rangerow"><span>买几个不同蓝球</span><b id="blueNVal">8</b></div>
+      <input type="range" id="blueN" min="1" max="16" value="8" step="1">
+      <div class="kpi" id="blueKpi"></div>
+      <p class="desc" id="blueNote"></p>
+    </div>
+
+    <div class="card sec">
+      <h3>轮转 vs 复式：同样的保证，1/7 的钱</h3>
+      <p class="desc">从 9 个号里选，复式要买全部 84 注（168 元）。
+      用轮转设计只需 12 注（24 元），保证的是同一件事：<b>开奖号里有 4 个落在你的 9 个号中，
+      就一定有一注中 4 红</b>。</p>
+      <div id="wheelBox"></div>
+    </div>
+  </div>
+
+  <div class="card sec">
+    <h3>换玩法能换到的中奖率</h3>
+    <p class="desc">中奖率是玩法规则决定的，换玩法等于换档位：要"常中"和要"中大的"，
+    在数学上是一根绳的两端。</p>
+    <table id="crossTable"></table>
+    <p class="desc" id="crossNote"></p>
+  </div>
+</section>
+
+<!-- ============ 依据 ============ -->
+<section id="tab-proof" class="tab">
+  <div class="card sec">
+    <h3>每条结论的依据</h3>
+    <p class="desc">所有判定都对照随机基线，并标注检验方法、统计量与 p 值。
+    多项比较时给出 Bonferroni 校正后的门槛。</p>
+    <div id="proofTable"></div>
+  </div>
+  <div class="card sec">
+    <h3>明确不做的事</h3>
+    <div id="excluded"></div>
+  </div>
+  <div class="card sec">
+    <h3>数据与复现</h3>
+    <div id="dataInfo"></div>
+  </div>
+</section>
+
+<div class="foot" id="footNote"></div>
+</div>
+
+<script>
+/* ================= 注入的数据 ================= */
+const MODEL = {"meta":{"generated":"2026-10-30","version":"2.2.0","iter":1,"mc_samples":300000,"model":"quasi-Poisson GLM on 1st-prize winner counts"},"games":{"ssq":{"name":"双色球","N":33,"k":6,"blueN":16,"bluek":1,"cap":31,"space":17721088,"mu":10.091738712776177,"n":2082,"price":2.031166975097175,"beta":{"1":-0.16261333352263266,"2":0.023348302129565252,"3":0.11159541544524973,"4":-0.08791059375550431,"5":0.16805687699067387,"6":0.09131396874533979,"7":0.12913883300143794,"8":0.1245654256140904,"9":0.22931700461429635,"10":0.052743081402368136,"11":0.04165958650839656,"12":0.029789846415476454,"13":0.01886470196818915,"14":-0.1372548145942662,"15":-0.12616192396588888,"16":0.0047856479265699844,"17":-0.009259726088418026,"18":-0.07652691227640954,"19":0.10901509997347089,"20":0.002693051144753829,"21":-0.15986255082084216,"22":-0.007567311752327076,"23":-0.13616708681522258,"24":-0.08787588105157926,"25":-0.005159324345174562,"26":0.04247768695879381,"27":0.11317663123358468,"28":0.023217118024568398,"29":-0.055501134019794486,"30":-0.005676615938755947,"31":-0.21213992483720592,"32":-0.07159834819724298,"33":0.02551720388443921},"beta_se":{"1":0.15708806835694164,"2":0.15562348363662104,"3":0.1558685816040911,"4":0.15753044240936856,"5":0.1546513228141842,"6":0.15337128875924805,"7":0.15457280331757492,"8":0.15567059064427488,"9":0.15439308452211076,"10":0.15333362336750422,"11":0.15431962958586953,"12":0.1556145779189771,"13":0.15372367202624884,"14":0.15474733794324513,"15":0.15642267264872334,"16":0.15264852648029406,"17":0.15783902105176098,"18":0.15509475313916024,"19":0.1532331040274649,"20":0.1543997658908612,"21":0.15666795011510734,"22":0.1543177083556038,"23":0.15698062443886962,"24":0.1555633713989713,"25":0.15483840505302846,"26":0.15374926022572327,"27":0.15464841393700374,"28":0.1567218484333859,"29":0.15711149439103198,"30":0.15522609848371166,"31":0.15958683309169647,"32":0.08557649815753293},"gamma":{"cons":0.038921457081791705,"tails":0.11682128197282726,"ap":0.06870312518955027,"allsmall":0.15247815646200658},"gamma_se":{"cons":0.02703669502683719,"tails":0.02944303337053073,"ap":0.03810757068943254,"allsmall":0.16068015117747217},"fbar":{"cons":0.8895292987512008,"tails":1.0292987512007685,"ap":2.7094140249759846,"allsmall":0.6786743515850144},"norm":1.0026723333406902,"w_p01":0.5448753568322371,"w_p99":1.7864317079327952,"w_range":[0.3729649586086507,2.996878318762753],"fit":{"lr":1507.9591160283962,"p":7.953200821157414e-219,"disp":9.59661487579383,"df":36,"variant":"full"},"data":{"n":2082,"first":"2013001","last":"2026124"},"blue":{"1":-0.2235369000255387,"2":-0.15323712911971496,"3":-0.04702847872097089,"4":-0.10042278782906232,"5":0.04776296653963362,"6":0.08493081432588755,"7":0.20889616570750374,"8":0.27486570764914137,"9":0.29485609956826336,"10":0.06887408539834532,"11":0.09183430139998687,"12":0.02678594528282634,"13":-0.11674777000445519,"14":-0.2356423325686185,"15":-0.2468740244579553,"16":-0.22444298819471864},"blue_lr_p":0.0,"drift":{"n":60,"mean_pred":9.76915,"mean_actual":7.98333,"se":1.25001,"z":-1.42865,"zeros":1,"alert":false,"ratio":0.8172},"select":{"full":7.0483,"marg":6.9911,"shape":7.1503},"variant":"full","quant":[0.37882,0.46805,0.48748,0.50088,0.5099,0.5177,0.52408,0.53019,0.53553,0.54031,0.5449,0.54869,0.55279,0.55682,0.5609,0.56422,0.56724,0.57057,0.57352,0.57621,0.57913,0.58173,0.58443,0.58643,0.58918,0.5915,0.59353,0.59551,0.59741,0.59962,0.60148,0.60333,0.60525,0.6072,0.60893,0.61057,0.61261,0.61441,0.61601,0.61772,0.61975,0.62138,0.62292,0.62464,0.62633,0.62792,0.62938,0.63111,0.63273,0.63433,0.63572,0.63698,0.63835,0.6399,0.64126,0.64271,0.64422,0.64537,0.64676,0.64809,0.6495,0.651,0.65223,0.65331,0.65455,0.65574,0.65712,0.65826,0.65948,0.66067,0.6619,0.66313,0.66438,0.66542,0.66656,0.66762,0.6687,0.66977,0.67102,0.67215,0.6731,0.67413,0.67529,0.67638,0.67751,0.67848,0.67944,0.68045,0.68157,0.68267,0.68374,0.68491,0.68598,0.687,0.68805,0.6891,0.69003,0.69103,0.69186,0.69277,0.69367,0.69468,0.69572,0.69669,0.6977,0.69866,0.69961,0.70048,0.70143,0.70239,0.70329,0.70421,0.70517,0.70609,0.70705,0.70789,0.70887,0.70975,0.71062,0.71152,0.71232,0.71321,0.714,0.71485,0.71586,0.71677,0.71761,0.71839,0.71922,0.72005,0.72094,0.72181,0.7227,0.7236,0.72443,0.72518,0.72602,0.72685,0.72762,0.7285,0.72934,0.73024,0.7311,0.73197,0.73286,0.73359,0.73449,0.73526,0.7361,0.73687,0.73769,0.73844,0.73918,0.74002,0.74082,0.7416,0.74234,0.74318,0.74397,0.74482,0.74561,0.74638,0.74707,0.74786,0.74854,0.74933,0.74999,0.75071,0.75153,0.75232,0.75303,0.75374,0.75446,0.7552,0.7559,0.75661,0.75734,0.75811,0.75888,0.75963,0.76036,0.76111,0.76182,0.76255,0.76326,0.76396,0.76475,0.7654,0.76617,0.76696,0.76767,0.76844,0.76908,0.76981,0.77049,0.77118,0.77191,0.77265,0.77342,0.77407,0.77477,0.77548,0.77622,0.77691,0.77757,0.77824,0.77891,0.77952,0.78019,0.78086,0.78161,0.78234,0.78296,0.7836,0.7843,0.78495,0.78564,0.7863,0.78701,0.78772,0.7884,0.78906,0.78973,0.79038,0.79105,0.79175,0.79243,0.79315,0.79374,0.79439,0.7951,0.79582,0.79644,0.7972,0.79793,0.79853,0.79921,0.79987,0.80055,0.80116,0.80171,0.80235,0.803,0.80369,0.80435,0.80503,0.8057,0.80627,0.80686,0.80751,0.80815,0.80869,0.80937,0.81,0.81065,0.81126,0.81191,0.81256,0.81317,0.81381,0.81453,0.81517,0.81587,0.81657,0.81711,0.81781,0.81839,0.81904,0.81967,0.8203,0.82098,0.82151,0.82217,0.82282,0.82347,0.82414,0.82475,0.8254,0.82601,0.82663,0.8272,0.82781,0.8285,0.82918,0.82979,0.83045,0.83105,0.83169,0.83227,0.83296,0.83355,0.83419,0.8348,0.83537,0.83591,0.83662,0.83725,0.83786,0.83853,0.83913,0.83982,0.84046,0.84106,0.84165,0.84229,0.84292,0.84355,0.84417,0.8448,0.84543,0.84603,0.84667,0.84728,0.84792,0.8485,0.84911,0.84969,0.85033,0.85089,0.85151,0.85209,0.85271,0.85339,0.85412,0.85479,0.85547,0.85612,0.85678,0.8574,0.85801,0.85856,0.85919,0.85984,0.8605,0.86109,0.86178,0.86244,0.86301,0.86372,0.86432,0.86496,0.86557,0.86627,0.86684,0.86749,0.86803,0.86857,0.8692,0.86982,0.87046,0.87103,0.87165,0.87228,0.87292,0.87352,0.87419,0.87474,0.87539,0.87602,0.87664,0.87725,0.87785,0.87843,0.87905,0.87973,0.88037,0.881,0.88154,0.88218,0.88276,0.88333,0.88398,0.88464,0.88518,0.88579,0.88641,0.88702,0.88755,0.88818,0.88878,0.88942,0.88997,0.89055,0.89114,0.89176,0.89235,0.8929,0.89346,0.89406,0.89472,0.89536,0.89598,0.89656,0.89719,0.89786,0.89843,0.89906,0.89968,0.90038,0.90103,0.9016,0.90219,0.9028,0.90344,0.90398,0.90457,0.90519,0.90577,0.90635,0.90698,0.90761,0.90828,0.90888,0.90947,0.91006,0.91073,0.9114,0.91196,0.91256,0.91316,0.91381,0.91437,0.915,0.91561,0.91626,0.91681,0.91743,0.91809,0.91862,0.91922,0.91975,0.92035,0.92096,0.9216,0.92226,0.92287,0.92351,0.92418,0.92481,0.92539,0.92603,0.92665,0.92727,0.92784,0.92843,0.92901,0.92971,0.93036,0.93094,0.93158,0.9322,0.93281,0.93339,0.93402,0.9347,0.93533,0.93584,0.93646,0.93706,0.93762,0.93821,0.93878,0.93936,0.94006,0.94065,0.94121,0.94183,0.94247,0.94312,0.94368,0.94423,0.94481,0.94543,0.94602,0.94666,0.94732,0.94789,0.94845,0.94905,0.94962,0.95026,0.95094,0.95165,0.95221,0.9528,0.95339,0.95405,0.95465,0.95525,0.95584,0.95647,0.95709,0.95775,0.95844,0.95913,0.95978,0.96037,0.96096,0.9616,0.96223,0.96285,0.96349,0.96405,0.96466,0.96525,0.96591,0.96649,0.9671,0.96769,0.96841,0.96909,0.96975,0.97037,0.97096,0.97162,0.97234,0.97301,0.97368,0.97434,0.97489,0.97553,0.97623,0.97686,0.97751,0.97815,0.97878,0.97942,0.98003,0.98066,0.98132,0.98201,0.98269,0.98339,0.98412,0.98473,0.98534,0.98597,0.98664,0.98737,0.98802,0.98871,0.98946,0.99014,0.99083,0.99155,0.99218,0.99284,0.99348,0.99412,0.9948,0.99545,0.99608,0.99673,0.9974,0.99817,0.99888,0.99959,1.00032,1.00099,1.00166,1.00231,1.00296,1.00359,1.0043,1.00498,1.00573,1.00634,1.007,1.00768,1.00834,1.00902,1.00976,1.01053,1.01128,1.01193,1.01256,1.01326,1.01391,1.01454,1.01531,1.01606,1.01678,1.0175,1.0182,1.01892,1.01963,1.02032,1.02103,1.0217,1.02249,1.02316,1.02392,1.02459,1.0253,1.02605,1.0267,1.02736,1.02807,1.0288,1.02955,1.03032,1.0311,1.03183,1.03258,1.03325,1.03397,1.03462,1.03526,1.03605,1.03684,1.03753,1.03829,1.03914,1.03992,1.04063,1.0414,1.04217,1.04291,1.04365,1.04432,1.04499,1.04569,1.04638,1.04707,1.04773,1.04845,1.04921,1.04992,1.05062,1.05126,1.05202,1.05273,1.05345,1.05421,1.05491,1.05568,1.0564,1.05713,1.05787,1.05872,1.05948,1.06032,1.06109,1.06192,1.06258,1.06331,1.06413,1.06483,1.06554,1.06632,1.06703,1.06779,1.0686,1.06939,1.07018,1.07096,1.07181,1.07261,1.07336,1.07422,1.07503,1.07587,1.07667,1.07744,1.07812,1.07887,1.07975,1.08058,1.08148,1.08223,1.08303,1.08379,1.08448,1.08527,1.08611,1.0869,1.08773,1.08861,1.08943,1.09034,1.09113,1.09198,1.0928,1.09351,1.09437,1.09522,1.09605,1.09683,1.09778,1.09865,1.09939,1.10014,1.10092,1.10173,1.10254,1.10342,1.10427,1.10508,1.10589,1.10662,1.10747,1.10835,1.10921,1.10998,1.11097,1.11174,1.11269,1.11358,1.11435,1.1152,1.11607,1.11688,1.11775,1.11866,1.11953,1.12033,1.12134,1.12228,1.12325,1.1242,1.12513,1.12607,1.12702,1.12792,1.12875,1.12965,1.13051,1.13149,1.13243,1.13335,1.13423,1.1352,1.1361,1.13693,1.13786,1.1389,1.13977,1.14068,1.14159,1.14247,1.14343,1.14434,1.14528,1.14625,1.14725,1.14818,1.14904,1.15004,1.15098,1.15196,1.15293,1.15389,1.15484,1.15587,1.15688,1.15792,1.15904,1.15995,1.16098,1.16196,1.16284,1.16369,1.16472,1.16574,1.16673,1.1677,1.16862,1.16964,1.17075,1.17196,1.173,1.17403,1.17499,1.176,1.17708,1.17798,1.17891,1.17997,1.18111,1.18225,1.18338,1.18441,1.18541,1.18651,1.18756,1.18871,1.18985,1.19098,1.19216,1.19343,1.19457,1.19572,1.19677,1.19787,1.19884,1.19992,1.20098,1.20202,1.20308,1.20425,1.20533,1.20657,1.20768,1.20883,1.20991,1.21087,1.21204,1.21326,1.21437,1.21562,1.21678,1.21807,1.21932,1.22049,1.22174,1.22282,1.22387,1.22497,1.22618,1.22751,1.22898,1.23027,1.23157,1.23276,1.23406,1.23536,1.23676,1.23798,1.23936,1.24073,1.24196,1.24334,1.24472,1.24593,1.24721,1.24856,1.24983,1.25121,1.25272,1.25416,1.25564,1.25706,1.25833,1.25964,1.26095,1.26231,1.26363,1.26533,1.26687,1.26837,1.26987,1.27128,1.27263,1.27413,1.27567,1.27729,1.27889,1.28048,1.28192,1.28337,1.28488,1.28643,1.28798,1.28965,1.29126,1.2931,1.29469,1.29618,1.29782,1.29928,1.30106,1.30258,1.30422,1.30594,1.30769,1.30923,1.31101,1.31276,1.31445,1.31636,1.31851,1.3204,1.32223,1.32409,1.32583,1.32754,1.32939,1.33116,1.33303,1.33476,1.33661,1.33827,1.34033,1.34245,1.34447,1.34668,1.34849,1.35035,1.35225,1.35442,1.35652,1.35881,1.36097,1.36302,1.36508,1.36727,1.36947,1.3715,1.37374,1.37593,1.37796,1.38023,1.38254,1.38482,1.38693,1.38894,1.39132,1.39393,1.39655,1.39902,1.40149,1.40385,1.4062,1.40892,1.41144,1.41417,1.41693,1.41951,1.42209,1.42501,1.42785,1.43038,1.43305,1.43648,1.43992,1.44286,1.44602,1.44891,1.4522,1.45516,1.45835,1.4616,1.4647,1.46817,1.47199,1.47533,1.47834,1.48218,1.48591,1.48933,1.49343,1.4979,1.50173,1.50577,1.51001,1.51447,1.5185,1.5229,1.52753,1.53242,1.53657,1.54193,1.54684,1.55182,1.55687,1.56198,1.56708,1.57213,1.57775,1.58306,1.58885,1.595,1.60136,1.60778,1.61371,1.62237,1.62901,1.63616,1.64451,1.65303,1.66196,1.67061,1.67939,1.68956,1.69944,1.71123,1.7238,1.73471,1.74784,1.76223,1.77729,1.79513,1.8121,1.83289,1.85989,1.88863,1.92419,1.9688,2.03422,2.13084,2.98889],"w_min":0.3788177707677049,"w_max":2.988891005676594,"capRatio":0.19033078880407125,"disp":11.09554619225828,"disp_chi2":23089.83162608948},"dlt":{"name":"大乐透","N":35,"k":5,"blueN":12,"bluek":2,"cap":31,"space":21425712,"mu":5.359688917692807,"n":1543,"price":2.4139468871862895,"beta":{"1":-0.08705009766799063,"2":0.04146004339589421,"3":-0.036176022824939744,"4":0.008566031990854206,"5":0.21732754279359717,"6":-0.06699008951793964,"7":-0.07462463807598306,"8":-0.08683746179689456,"9":0.17569522570901042,"10":-0.008817762629549336,"11":0.14761336624547872,"12":0.05692685260340888,"13":-0.18008072971063735,"14":-0.1547770251834941,"15":-0.006968046240290016,"16":0.05269707446527652,"17":-0.11708968781052796,"18":0.050638838203407144,"19":0.21083147556910292,"20":0.04108052932210185,"21":-0.17067519864795644,"22":-0.0016261569260237752,"23":0.06393785736290516,"24":-0.06046604642503496,"25":-0.12451719877347521,"26":-0.16044867652981545,"27":-0.03602582774673904,"28":0.07209383075461911,"29":0.15274664999735904,"30":-0.027201260341919345,"31":-0.1354304525909637,"32":0.1126868213136297,"33":0.21424806755554948,"34":0.04409049656687422,"35":-0.12683832440889453},"beta_se":{"1":0.153769888479275,"2":0.14959823800421113,"3":0.1488273924550488,"4":0.15001465497806726,"5":0.14839542549694074,"6":0.15294257966320599,"7":0.14844052384683634,"8":0.15175957316554187,"9":0.1477152320039291,"10":0.1542796632362353,"11":0.1510535928474407,"12":0.15040753894738734,"13":0.15354986682704655,"14":0.15555288471695058,"15":0.1518229129781345,"16":0.15024783441411083,"17":0.15484063176874766,"18":0.15042728494725505,"19":0.1483826203812265,"20":0.14986688747734667,"21":0.15194743356792106,"22":0.1492913310854074,"23":0.15185158649389993,"24":0.15694121482391965,"25":0.15333496848116457,"26":0.15250042250700663,"27":0.1512382830822938,"28":0.1498817782112216,"29":0.14815944720678434,"30":0.15241360985447996,"31":0.15506133828160246,"32":0.12331899657612398,"33":0.12263787122991086,"34":0.12811671793409155},"gamma":{"cons":0.03734530107333369,"tails":-0.014733413071586073,"ap":0.07101262521987317,"allsmall":0.23471420514423572},"gamma_se":{"cons":0.042221364981855726,"tails":0.04395373067422268,"ap":0.05516158674926339,"allsmall":0.1359607862811508},"fbar":{"cons":0.6085547634478289,"tails":0.6973428386260532,"ap":2.390797148412184,"allsmall":0.5385612443292288},"norm":1.0097012822296314,"w_p01":0.5482275291109077,"w_p99":1.7499667855178556,"w_range":[0.3831104764750475,2.6529921162888934],"fit":{"lr":526.8496239203978,"p":5.031351308588446e-76,"disp":6.746760762113843,"df":38,"variant":"full"},"data":{"n":1543,"first":"16078","last":"26123"},"drift":{"n":60,"mean_pred":5.39931,"mean_actual":5.68333,"se":0.77919,"z":0.36451,"zeros":0,"alert":false,"ratio":1.0526},"select":{"full":3.4694,"marg":3.4943,"shape":3.4657},"variant":"full","quant":[0.38537,0.46278,0.48249,0.4963,0.50607,0.51567,0.52289,0.52828,0.53432,0.53956,0.54459,0.5486,0.55309,0.5573,0.56086,0.56413,0.56773,0.57095,0.57389,0.57686,0.57956,0.58246,0.58487,0.5876,0.59012,0.59265,0.59452,0.59674,0.59895,0.60124,0.60322,0.60492,0.60687,0.60916,0.61124,0.61314,0.61478,0.61677,0.61842,0.62027,0.62194,0.62382,0.62556,0.62714,0.62883,0.63052,0.63212,0.63365,0.63504,0.63654,0.63814,0.63978,0.64118,0.64265,0.64424,0.64555,0.64691,0.64849,0.64991,0.65129,0.6525,0.65381,0.65518,0.65637,0.65763,0.65901,0.66016,0.66143,0.66265,0.66405,0.66522,0.6664,0.6676,0.6688,0.66992,0.67109,0.67228,0.6734,0.6745,0.67565,0.67679,0.67793,0.67905,0.68002,0.6811,0.68221,0.68326,0.68433,0.68523,0.68618,0.68736,0.68839,0.68954,0.69054,0.69164,0.69258,0.69358,0.69475,0.69564,0.69667,0.69776,0.69882,0.69988,0.7008,0.70173,0.70269,0.70367,0.70465,0.70557,0.70644,0.70737,0.70826,0.70927,0.71038,0.71127,0.71216,0.7131,0.71395,0.71495,0.71582,0.71676,0.71768,0.71841,0.71928,0.7201,0.72094,0.72187,0.72286,0.72364,0.72463,0.72542,0.72625,0.7271,0.72788,0.72874,0.72946,0.73048,0.73124,0.73201,0.73282,0.73369,0.73455,0.7353,0.73625,0.73701,0.73781,0.73862,0.73947,0.74027,0.7411,0.74186,0.74253,0.74327,0.74415,0.74486,0.74565,0.74639,0.74721,0.74798,0.74869,0.74947,0.75012,0.75098,0.75165,0.75259,0.75329,0.75404,0.75477,0.75554,0.7563,0.75709,0.7578,0.75863,0.75936,0.76021,0.76093,0.76157,0.76237,0.76309,0.76385,0.76451,0.76518,0.766,0.7667,0.76744,0.76822,0.76893,0.76956,0.77021,0.77098,0.77175,0.7725,0.77318,0.77395,0.77467,0.77538,0.77614,0.77683,0.77748,0.77828,0.77894,0.77955,0.7803,0.78107,0.78184,0.7825,0.78322,0.7839,0.78468,0.78532,0.78607,0.78673,0.78756,0.78822,0.78882,0.78958,0.79029,0.79098,0.79161,0.79226,0.79293,0.79358,0.7942,0.79481,0.79555,0.79624,0.79697,0.7977,0.79841,0.79909,0.7998,0.80039,0.80105,0.80179,0.80243,0.80307,0.80393,0.80452,0.80517,0.80586,0.80654,0.80709,0.80769,0.80835,0.80902,0.80967,0.81034,0.81098,0.81162,0.81226,0.81296,0.81368,0.81427,0.81496,0.81572,0.81641,0.81705,0.81775,0.81836,0.81898,0.81964,0.82036,0.82099,0.82168,0.82231,0.82295,0.82358,0.82423,0.82482,0.82543,0.82609,0.8267,0.82739,0.82794,0.82854,0.82921,0.82986,0.83055,0.8312,0.83185,0.83258,0.83329,0.83387,0.83456,0.8352,0.83586,0.83648,0.83705,0.8376,0.8382,0.83884,0.8395,0.84007,0.84068,0.84133,0.84194,0.8426,0.84322,0.84393,0.84451,0.84513,0.84581,0.84648,0.84718,0.84782,0.84839,0.84901,0.84963,0.85026,0.85083,0.85155,0.85221,0.85282,0.85353,0.85427,0.85489,0.85558,0.85622,0.85675,0.85737,0.85795,0.85864,0.85925,0.85991,0.86057,0.86111,0.86168,0.86227,0.86295,0.86359,0.86422,0.86486,0.86547,0.86605,0.86671,0.86729,0.86781,0.86846,0.86911,0.8697,0.87032,0.87096,0.87159,0.87223,0.87286,0.87346,0.87403,0.87463,0.87525,0.87586,0.87648,0.87713,0.87777,0.87834,0.87885,0.87952,0.88016,0.88074,0.88133,0.88201,0.88261,0.88318,0.88378,0.88451,0.88508,0.88566,0.88622,0.88685,0.88745,0.88807,0.88863,0.88926,0.88986,0.89049,0.89103,0.89168,0.89224,0.89287,0.89342,0.894,0.8946,0.89511,0.89578,0.8964,0.89691,0.89751,0.89808,0.89866,0.89927,0.89995,0.9006,0.90123,0.90182,0.90247,0.90301,0.90364,0.9043,0.90488,0.90548,0.90603,0.90661,0.90723,0.9079,0.90846,0.90907,0.90969,0.91022,0.91073,0.91146,0.91212,0.91262,0.91317,0.91379,0.91443,0.915,0.91567,0.91637,0.91695,0.91757,0.91814,0.91872,0.91929,0.91986,0.9205,0.9212,0.92183,0.92245,0.92301,0.92364,0.92424,0.92488,0.92548,0.92615,0.9267,0.92731,0.92794,0.92853,0.92914,0.9298,0.93046,0.93107,0.93169,0.93222,0.93288,0.93348,0.9341,0.93475,0.93531,0.93586,0.93639,0.93704,0.93769,0.93834,0.93893,0.93956,0.94024,0.9408,0.94138,0.94201,0.94265,0.94328,0.94392,0.94454,0.94523,0.94577,0.9464,0.94703,0.94761,0.94823,0.94885,0.94943,0.95001,0.95061,0.95122,0.95191,0.9526,0.95328,0.95392,0.95457,0.95519,0.95579,0.95645,0.95714,0.95775,0.95838,0.95905,0.95972,0.96026,0.9609,0.9616,0.96221,0.96288,0.96344,0.96414,0.96473,0.96532,0.96595,0.96658,0.96715,0.96771,0.96843,0.96906,0.96968,0.97016,0.97081,0.97141,0.97209,0.97276,0.97344,0.9741,0.97467,0.97526,0.97586,0.97648,0.97715,0.97775,0.97838,0.97893,0.97958,0.98015,0.9808,0.98141,0.98207,0.9827,0.98331,0.98397,0.98461,0.98516,0.98589,0.98658,0.98726,0.98787,0.9885,0.98916,0.9898,0.99044,0.99106,0.99168,0.9924,0.99301,0.99367,0.99437,0.99504,0.99568,0.99641,0.99703,0.99769,0.99842,0.99904,0.99963,1.00033,1.00101,1.0017,1.00228,1.00295,1.00369,1.00437,1.00499,1.0056,1.00628,1.00689,1.00753,1.00832,1.00898,1.0096,1.01026,1.01092,1.01158,1.01231,1.01294,1.01359,1.01425,1.01486,1.0156,1.01616,1.01683,1.01745,1.01813,1.0187,1.01936,1.02007,1.02073,1.02142,1.02212,1.0228,1.02348,1.0241,1.02483,1.02553,1.02618,1.0268,1.02745,1.02813,1.02884,1.02948,1.03006,1.03076,1.03151,1.0323,1.03304,1.03368,1.03429,1.03499,1.03564,1.0364,1.03718,1.0379,1.03855,1.03928,1.04,1.04069,1.04142,1.04218,1.0428,1.04351,1.04418,1.0449,1.04566,1.04633,1.04708,1.04775,1.04857,1.04925,1.04993,1.05068,1.05146,1.05219,1.05297,1.05362,1.05423,1.05508,1.05581,1.05653,1.05727,1.05798,1.05877,1.05949,1.06031,1.06096,1.06175,1.06251,1.06327,1.06405,1.06473,1.06556,1.06624,1.06691,1.06762,1.0684,1.06919,1.07002,1.07072,1.07142,1.0721,1.07288,1.07364,1.0744,1.07521,1.07601,1.07679,1.07744,1.07823,1.07899,1.07984,1.08067,1.0814,1.08212,1.08289,1.08365,1.08454,1.08522,1.08599,1.08687,1.08755,1.0884,1.08915,1.08984,1.09063,1.09142,1.09222,1.09298,1.0938,1.09457,1.09539,1.09617,1.09688,1.09752,1.09843,1.09931,1.10023,1.10109,1.10184,1.10256,1.10325,1.10394,1.10472,1.10549,1.10634,1.10725,1.10805,1.10886,1.10966,1.11046,1.11145,1.11231,1.11315,1.11395,1.11476,1.11559,1.11641,1.11723,1.11801,1.11889,1.11966,1.12049,1.12129,1.12223,1.12316,1.12405,1.12499,1.12593,1.12684,1.12771,1.1285,1.12931,1.13015,1.13097,1.13184,1.13276,1.13365,1.13454,1.13543,1.13641,1.13722,1.13812,1.13892,1.13985,1.14086,1.14173,1.14252,1.14337,1.14439,1.14526,1.14617,1.14707,1.14801,1.14902,1.14984,1.15086,1.15169,1.15263,1.15347,1.1544,1.15535,1.15632,1.15739,1.1583,1.15938,1.16036,1.16142,1.1624,1.16327,1.16419,1.16514,1.16606,1.16723,1.16832,1.16942,1.17027,1.17133,1.1721,1.17314,1.17407,1.17519,1.17618,1.1773,1.17833,1.1794,1.18033,1.18129,1.18224,1.18326,1.18428,1.18542,1.18642,1.18752,1.1886,1.18957,1.19069,1.19187,1.19285,1.19387,1.19504,1.19612,1.19724,1.19842,1.19946,1.20053,1.20159,1.20289,1.20393,1.20502,1.20594,1.20709,1.20826,1.20945,1.21075,1.21179,1.21288,1.21397,1.21531,1.2165,1.21771,1.21898,1.22009,1.22119,1.22239,1.22359,1.22469,1.22596,1.22718,1.22843,1.2297,1.23062,1.23178,1.23294,1.2342,1.23547,1.2368,1.23808,1.23934,1.2407,1.24185,1.24304,1.24431,1.24574,1.247,1.24833,1.24946,1.25059,1.25186,1.25312,1.25438,1.25564,1.25695,1.25817,1.2596,1.26097,1.2623,1.26369,1.26525,1.26664,1.26795,1.26948,1.2709,1.2723,1.27382,1.27526,1.27657,1.27788,1.27924,1.28057,1.28206,1.28356,1.28519,1.28647,1.28783,1.28946,1.29103,1.29247,1.294,1.29559,1.29714,1.29858,1.30036,1.30183,1.30339,1.30494,1.30661,1.3083,1.31016,1.31178,1.3135,1.31514,1.31681,1.31869,1.32064,1.32239,1.32402,1.32603,1.32792,1.32969,1.33149,1.33328,1.33503,1.33676,1.33879,1.34059,1.34242,1.34415,1.34608,1.34783,1.34991,1.35179,1.35391,1.35597,1.35831,1.36018,1.3623,1.36437,1.36665,1.36881,1.37127,1.37351,1.37571,1.37784,1.3802,1.38256,1.3847,1.38706,1.38967,1.39219,1.39461,1.39688,1.39917,1.40167,1.40419,1.40664,1.409,1.41165,1.414,1.41662,1.41953,1.42203,1.42513,1.42802,1.43088,1.43385,1.43668,1.43966,1.44323,1.44622,1.44981,1.45255,1.45586,1.45871,1.46179,1.46523,1.46826,1.47181,1.47558,1.47933,1.48256,1.48694,1.49032,1.49424,1.49798,1.50164,1.50585,1.51033,1.51436,1.51874,1.5233,1.52777,1.53243,1.538,1.54284,1.54827,1.55346,1.55781,1.56385,1.56942,1.57535,1.58204,1.58838,1.59551,1.60213,1.60957,1.61666,1.62454,1.63304,1.64123,1.65001,1.65874,1.66773,1.67947,1.68907,1.70072,1.71378,1.7282,1.74369,1.75946,1.7783,1.79569,1.81839,1.84892,1.87936,1.91594,1.97337,2.05815,2.48256],"w_min":0.3853666752602618,"w_max":2.4825630619890457,"capRatio":0.5807099799062291,"disp":7.615089775236849,"disp_chi2":11742.46843341522}}};
+const STATS = {"games":{"ssq":{"dist":[{"lo":0,"hi":0,"obs":18,"exp":0.1714327763358951},{"lo":1,"hi":2,"obs":168,"exp":7.663512672102767},{"lo":3,"hi":5,"obs":546,"exp":146.5508735774332},{"lo":6,"hi":9,"obs":595,"exp":791.2190964279964},{"lo":10,"hi":14,"obs":383,"exp":928.4115830635316},{"lo":15,"hi":19,"obs":173,"exp":194.59346431630993},{"lo":20,"hi":29,"obs":117,"exp":13.383553198841973},{"lo":30,"hi":49,"obs":56,"exp":0.006483967446981289},{"lo":50,"hi":99,"obs":21,"exp":2.6539111438098228e-12},{"lo":100,"hi":1000000000,"obs":5,"exp":7.854437875384258e-48}],"prize":{"min":1388888.0,"median":7393402.0,"mean":7610657.759796438,"max":10000000.0,"at_cap":374,"at_cap_ratio":0.19033078880407125,"p10":5562668.0,"p90":10000000.0,"with_prize":1965},"numbers":{"rel":{"33":-0.09801348127595651,"1":-0.1621512702642149,"2":0.03292427411764752,"3":0.1228080716754109,"4":-0.08506653381021587,"5":0.162558800507554,"6":0.08836618353572238,"7":0.1372965199252157,"8":0.1370879322814147,"9":0.2432596030764227,"10":0.06033506517269528,"11":0.05465475397476004,"12":0.04537157822692715,"13":0.03598436732282438,"14":-0.13106118346417409,"15":-0.11681670390037618,"16":0.03467071944343224,"17":0.003093091873288295,"18":-0.06690384137383945,"19":0.1189301537901354,"20":0.013852823619631027,"21":-0.14668776415621204,"22":0.009604941935705658,"23":-0.1154050402506558,"24":-0.09938920580168037,"25":0.006804934306221477,"26":0.04398346964116774,"27":0.11332004471381256,"28":0.017129546647189936,"29":-0.043837104062179,"30":-0.01226729153390936,"31":-0.20909071211366279,"32":-0.19534674378010303},"se":{"1":0.08352652531326474,"2":0.08101036097222857,"3":0.08290070675747553,"4":0.08533626820040188,"5":0.08033596071365519,"6":0.07986594700777458,"7":0.07903180999343418,"8":0.08115138579289767,"9":0.07899701627114376,"10":0.08102515894661848,"11":0.08281971685295757,"12":0.08042298154394265,"13":0.0806339128444214,"14":0.0833172814486615,"15":0.08436985946075413,"16":0.07998017227245319,"17":0.08105856273826186,"18":0.08345395237754874,"19":0.0786766433642864,"20":0.08115405816956904,"21":0.08728442934436972,"22":0.08134620294303177,"23":0.08402212845613416,"24":0.08370518754601806,"25":0.08329598576779322,"26":0.08048293810811434,"27":0.08103593204345183,"28":0.08437017000535206,"29":0.08406885480720783,"30":0.0839228844432679,"31":0.08752276213310288,"32":0.0860479701582661},"lr":1300.400107826721,"df":32,"p":1.6202361811167096e-189,"ratio":1.572002548501853,"D":9.984422445127157,"bonf_t":3.1717657833515904},"disp":11.09554619225828,"disp_chi2":23089.83162608948,"n":2082},"dlt":{"dist":[{"lo":0,"hi":0,"obs":76,"exp":11.732433519493734},{"lo":1,"hi":2,"obs":393,"exp":171.17505135904136},{"lo":3,"hi":5,"obs":548,"exp":674.6027394551355},{"lo":6,"hi":9,"obs":330,"exp":591.9648601818584},{"lo":10,"hi":14,"obs":129,"exp":91.72437892906436},{"lo":15,"hi":19,"obs":37,"exp":1.7904085144923512},{"lo":20,"hi":29,"obs":14,"exp":0.010128018943462097},{"lo":30,"hi":49,"obs":11,"exp":2.1970846669028443e-08},{"lo":50,"hi":99,"obs":4,"exp":4.2403182659300653e-23},{"lo":100,"hi":1000000000,"obs":1,"exp":1.9739735803304528e-72}],"prize":{"min":-1.0,"median":10000000.0,"mean":8910350.485599464,"max":10000000.0,"at_cap":867,"at_cap_ratio":0.5807099799062291,"p10":6597056.0,"p90":10000000.0,"with_prize":1493},"numbers":{"rel":{"35":-0.28187749140005397,"1":-0.07742430108838019,"2":0.05797321503940395,"3":-0.019243611096492086,"4":0.02159592960458523,"5":0.23188227136991985,"6":-0.04499293126377768,"7":-0.05185074465791423,"8":-0.06908673389296421,"9":0.20283424522103982,"10":0.018629710554536327,"11":0.17796752369027563,"12":0.08319992332931292,"13":-0.16488240111276936,"14":-0.13389694043827752,"15":0.019745443310140776,"16":0.07630135243353009,"17":-0.09285604540167153,"18":0.06871741553756411,"19":0.23039219536244532,"20":0.06233769827194979,"21":-0.15058939265381288,"22":0.012691096889541453,"23":0.07622124880277342,"24":-0.04369146203224014,"25":-0.10487844787584705,"26":-0.1448699921733365,"27":-0.013659067147057391,"28":0.08476153400069864,"29":0.16389464850635982,"30":-0.011799666266633702,"31":-0.1228676706251901,"32":-0.030331206880519823,"33":0.06061788436740895,"34":-0.09096523028454834},"se":{"1":0.12265731629674169,"2":0.11930657241356063,"3":0.11818064241782257,"4":0.1213230384570791,"5":0.11905635447909566,"6":0.12085954462739758,"7":0.1183665242043062,"8":0.12253078495925668,"9":0.11841885638939256,"10":0.12363887658803827,"11":0.12042256850176696,"12":0.12086952184585666,"13":0.12625565966114335,"14":0.12588290212116884,"15":0.11987778882181688,"16":0.12244861179499789,"17":0.1265549422598256,"18":0.12215858089270662,"19":0.11849868381273114,"20":0.11947392280650679,"21":0.1237887787708497,"22":0.12004329179462261,"23":0.12315854630845881,"24":0.12756340336692262,"25":0.12646461536073245,"26":0.12599179334437888,"27":0.1225897332350327,"28":0.12142603543485299,"29":0.11904951622187042,"30":0.12329075082378868,"31":0.12873584616659695,"32":0.12231044747454133,"33":0.12159318888885069,"34":0.12657537361788096},"lr":482.5623318882572,"df":34,"p":4.283464083047814e-70,"ratio":1.6715640796716749,"D":6.7810281963899115,"bonf_t":3.188815258638443},"disp":7.615089775236849,"disp_chi2":11742.46843341522,"n":1543}}};
+const PROF  = {"ssq":{"sum":[74,128],"span":[17,30],"odd":[2,4],"cons":2,"ac":[5,99]},"dlt":{"sum":[59,117],"span":[15,31],"odd":[1,4],"cons":2,"ac":[4,99]}};
+const META  = {"ssq":{"n":"2,082","range":"2013001–2026124"},"dlt":{"n":"1,543","range":"16078–26123"},"total":"3,625","mc":"300,000","cv":0.2664980749276672,"cvObs":1.0001886255941757,"uniform":{"ssqFreq":0.019,"dltFreq":0.4914,"dltZones":0.0211},"version":"2.2.0","iter":1,"modelGen":"2026-10-30","lastRun":"2026-10-30 08:06:10","recentAt":"2026-10-30 08:07:13","drift":{"ssq":{"n":60,"mean_pred":9.76915,"mean_actual":7.98333,"se":1.25001,"z":-1.42865,"zeros":1,"alert":false,"ratio":0.8172},"dlt":{"n":60,"mean_pred":5.39931,"mean_actual":5.68333,"se":0.77919,"z":0.36451,"zeros":0,"alert":false,"ratio":1.0526}}};
+const LAB   = {"strategies":{"分散买（8 注互不重叠）":{"n":8,"tickets":[[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17,18],[19,20,21,22,23,24],[25,26,27,28,29,30],[1,2,3,31,32,33],[4,5,6,7,8,9],[10,11,12,13,14,15]],"q3":0.3938232234950811,"q4":0.03802836484983315,"q5":0.0011773543475434465,"q6":7.22303280701501e-06,"any_blue8":0.5190141824249166},"小池轮转（8 注都取 1–9 号）":{"n":8,"tickets":[[1,2,3,4,5,6],[1,2,3,7,8,9],[4,5,6,7,8,9],[1,2,3,4,5,7],[1,2,3,6,8,9],[1,4,5,6,7,8],[2,3,4,5,6,9],[1,2,4,7,8,9]],"q3":0.17674400127125378,"q4":0.024236886583938865,"q5":0.0010021958019733326,"q6":7.22303280701501e-06,"any_blue8":0.5121184432919694},"极度集中（8 注共用同 5 个号）":{"n":8,"tickets":[[1,2,3,4,5,6],[1,2,3,4,5,7],[1,2,3,4,5,8],[1,2,3,4,5,9],[1,2,3,4,5,10],[1,2,3,4,5,11],[1,2,3,4,5,12],[1,2,3,4,5,13]],"q3":0.17243004492726405,"q4":0.021017219710211924,"q5":0.0008739869696488161,"q6":7.22303280701501e-06,"any_blue8":0.5105086098551059}},"wheel":{"n":12,"tickets":[[1,2,3,4,5,6],[1,2,3,7,8,9],[4,5,6,7,8,9],[1,2,4,5,7,8],[1,3,4,6,7,9],[2,3,5,6,8,9],[1,2,4,6,8,9],[1,3,5,6,7,8],[2,3,4,5,7,9],[1,2,5,6,7,9],[1,3,4,5,8,9],[2,3,4,6,7,8]],"q3":0.18770856507230255,"q4":0.03420467185761958,"q5":0.0016360169307888996,"q6":1.0834549210522514e-05,"any_blue8":0.5171023359288098},"blue_cover":[{"n":1,"cost":2,"p":0.0625,"low":5},{"n":2,"cost":4,"p":0.125,"low":5},{"n":3,"cost":6,"p":0.1875,"low":5},{"n":4,"cost":8,"p":0.25,"low":5},{"n":5,"cost":10,"p":0.3125,"low":5},{"n":6,"cost":12,"p":0.375,"low":5},{"n":7,"cost":14,"p":0.4375,"low":5},{"n":8,"cost":16,"p":0.5,"low":5},{"n":9,"cost":18,"p":0.5625,"low":5},{"n":10,"cost":20,"p":0.625,"low":5},{"n":11,"cost":22,"p":0.6875,"low":5},{"n":12,"cost":24,"p":0.75,"low":5},{"n":13,"cost":26,"p":0.8125,"low":5},{"n":14,"cost":28,"p":0.875,"low":5},{"n":15,"cost":30,"p":0.9375,"low":5},{"n":16,"cost":32,"p":1.0,"low":5}],"cross":[{"game":"双色球","p":0.06709452602458721,"price":2.0,"per_yuan":0.033547263012293604,"ret":0.2431552171063086,"total":17721088,"odds":14.904345544277989},{"game":"大乐透","p":0.06670476108331896,"price":2.0,"per_yuan":0.03335238054165948,"ret":0.27292920300618245,"total":21425712,"odds":14.991433651204137},{"game":"福彩3D 组选6","p":0.006,"price":2.0,"per_yuan":0.003,"ret":0.52,"total":1000,"odds":166.66666666666666},{"game":"排列5","p":1e-05,"price":2.0,"per_yuan":5e-06,"ret":0.5,"total":100000,"odds":99999.99999999999}],"full9":{"n":84,"q3":0.18770856507230255,"q4":0.03420467185761958,"q5":0.002806148245525331,"q6":7.58418444736576e-05}};
+const RECENT = {"fetched_at":"2026-10-30 08:07:13","days":5,"window":{"from":"2026-10-26","to":"2026-10-30"},"items":[{"game":"ssq","issue":"2026124","date":"2026-10-29","nums":[3,11,17,22,23,29],"extra":[9],"sales":346568144.0,"pool":1075698427.0,"first_count":8.0,"first_money":6656899.0,"detail_url":"/c/2026/10/29/671548.shtml","name":"双色球","weekday":"周四","source":"中国福利彩票发行管理中心","digit":false},{"game":"ssq","issue":"2026123","date":"2026-10-27","nums":[4,5,20,21,26,30],"extra":[12],"sales":334118378.0,"pool":1079246630.0,"first_count":5.0,"first_money":8447916.0,"detail_url":"/c/2026/10/27/671234.shtml","name":"双色球","weekday":"周二","source":"中国福利彩票发行管理中心","digit":false},{"game":"dlt","issue":"26123","date":"2026-10-28","nums":[13,18,19,20,28],"extra":[9,11],"sales":317714615.0,"pool":731643950.16,"first_count":11.0,"first_money":5750462.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?dlt","name":"大乐透","weekday":"周三","source":"国家体育总局体育彩票管理中心","digit":false},{"game":"dlt","issue":"26122","date":"2026-10-26","nums":[2,14,21,22,24],"extra":[2,12],"sales":318170280.0,"pool":773998832.08,"first_count":7.0,"first_money":7995227.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?dlt","name":"大乐透","weekday":"周一","source":"国家体育总局体育彩票管理中心","digit":false},{"game":"fc3d","issue":"2026288","date":"2026-10-29","nums":[6,1,2],"extra":[],"sales":98279284.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/29/671549.shtml","name":"福彩3D","weekday":"周四","source":"中国福利彩票发行管理中心","digit":true},{"game":"fc3d","issue":"2026287","date":"2026-10-28","nums":[1,2,1],"extra":[],"sales":101470054.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/28/671442.shtml","name":"福彩3D","weekday":"周三","source":"中国福利彩票发行管理中心","digit":true},{"game":"fc3d","issue":"2026286","date":"2026-10-27","nums":[1,9,2],"extra":[],"sales":100468510.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/27/671235.shtml","name":"福彩3D","weekday":"周二","source":"中国福利彩票发行管理中心","digit":true},{"game":"fc3d","issue":"2026285","date":"2026-10-26","nums":[9,3,2],"extra":[],"sales":99355354.0,"pool":null,"first_count":null,"first_money":null,"detail_url":"/c/2026/10/26/671128.shtml","name":"福彩3D","weekday":"周一","source":"中国福利彩票发行管理中心","digit":true},{"game":"pl5","issue":"26288","date":"2026-10-29","nums":[4,1,5,7,2],"extra":[],"sales":23172772.0,"pool":28892220.78,"first_count":49.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周四","source":"国家体育总局体育彩票管理中心","digit":true},{"game":"pl5","issue":"26287","date":"2026-10-28","nums":[1,5,4,4,8],"extra":[],"sales":22021184.0,"pool":22437562.5,"first_count":50.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周三","source":"国家体育总局体育彩票管理中心","digit":true},{"game":"pl5","issue":"26286","date":"2026-10-27","nums":[2,1,8,1,9],"extra":[],"sales":21857470.0,"pool":16647182.34,"first_count":199.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周二","source":"国家体育总局体育彩票管理中心","digit":true},{"game":"pl5","issue":"26285","date":"2026-10-26","nums":[6,1,3,0,0],"extra":[],"sales":22197048.0,"pool":25837022.04,"first_count":62.0,"first_money":100000.0,"detail_url":"https://www.lottery.gov.cn/kj/kjlb.html?pl5","name":"排列5","weekday":"周一","source":"国家体育总局体育彩票管理中心","digit":true}],"raw_count":{"ssq":30,"fc3d":30,"dlt":30,"pl5":30},"errors":[]};
+
+/* ================= 玩法定义 ================= */
+const GAMES = {
+  ssq:  {name:'双色球', N:33, k:6, blueN:16, bluek:1, digits:null},
+  dlt:  {name:'大乐透', N:35, k:5, blueN:12, bluek:2, digits:null},
+  fc3d: {name:'福彩3D', N:0,  k:3, blueN:0,  bluek:0, digits:3, maxDigit:9},
+  pl5:  {name:'排列5', N:0,  k:5, blueN:0,  bluek:0, digits:5, maxDigit:9}
+};
+
+let game = 'ssq', count = 5, tier = 'random', useStruct = true;
+let lastBets = [], lastType = 'ssq';
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+
+/* ================= 随机数（去偏） ================= */
+function randInt(max) {              // [0, max)
+  if (window.crypto && crypto.getRandomValues) {
+    const lim = Math.floor(4294967296 / max) * max;
+    const a = new Uint32Array(1);
+    let v;
+    do { crypto.getRandomValues(a); v = a[0]; } while (v >= lim);
+    return v % max;
+  }
+  return Math.floor(Math.random() * max);
+}
+function pickUnique(n, max) {
+  const pool = Array.from({length: max}, (_, i) => i + 1);
+  for (let i = 0; i < n; i++) {
+    const j = i + randInt(max - i);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, n).sort((a, b) => a - b);
+}
+
+/* ================= 组合结构 ================= */
+function shapeOf(nums, cap) {
+  const s = new Set(nums);
+  let cons = 0;
+  for (let i = 1; i < nums.length; i++) if (nums[i] - nums[i-1] === 1) cons++;
+  const tails = nums.length - new Set(nums.map(x => x % 10)).size;
+  let ap = 1;
+  for (const a of nums) for (const b of nums) {
+    if (b <= a) continue;
+    const d = b - a; let ln = 2, x = b + d;
+    while (s.has(x)) { ln++; x += d; }
+    if (ln > ap) ap = ln;
+  }
+  const all = Math.max.apply(null, nums) <= cap ? 1 : 0;
+  return {cons, tails, ap, all};
+}
+function acValue(nums) {
+  const d = new Set();
+  for (let i = 0; i < nums.length; i++)
+    for (let j = i + 1; j < nums.length; j++) d.add(nums[j] - nums[i]);
+  return d.size - (nums.length - 1);
+}
+function sumOf(nums) { return nums.reduce((a, b) => a + b, 0); }
+
+/* ================= 冷门度模型 ================= */
+function logW(gid, nums) {
+  const m = MODEL.games[gid];
+  let s = 0;
+  for (const x of nums) s += m.beta[String(x)] || 0;
+  const f = shapeOf(nums, m.cap);
+  s += m.gamma.cons       * (f.cons  - m.fbar.cons)
+     + m.gamma.tails      * (f.tails - m.fbar.tails)
+     + m.gamma.ap         * (f.ap    - m.fbar.ap)
+     + m.gamma.allsmall   * (f.all   - m.fbar.allsmall);
+  return s;
+}
+function weightOf(gid, nums, blue) {
+  const m = MODEL.games[gid];
+  let s = logW(gid, nums);
+  if (blue != null && m.blue) {
+    if (Array.isArray(blue)) { for (const b of blue) s += m.blue[String(b)] || 0; }
+    else s += m.blue[String(blue)] || 0;
+  }
+  return Math.exp(s) / m.norm;
+}
+function lambdaOf(gid, nums, blue) {
+  return MODEL.games[gid].mu * weightOf(gid, nums, blue);
+}
+function shareOf(lam) { return lam <= 0 ? 1 : (1 - Math.exp(-lam)) / lam; }
+function pctOf(gid, w) {            // 比多少比例的组合更冷门（w 越小越冷），单位 %
+  const q = MODEL.games[gid].quant;
+  let lo = 0, hi = q.length - 1;
+  if (w <= q[0]) return 99.9;
+  if (w >= q[hi]) return 0.1;
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (q[mid] <= w) lo = mid; else hi = mid; }
+  const p = 100 * (1 - lo / (q.length - 1));
+  return Math.max(0.1, Math.min(99.9, p));
+}
+function pctText(p) { return p.toFixed(1) + '%'; }
+function pctLabel(p) {              // 分位表只到 0.1% 精度，顶格时如实说「以上」
+  if (p >= 99.9) return '比 99.9% 以上的组合更冷';
+  if (p <= 0.1) return '比 0.1% 的组合更冷';
+  return '比 ' + p.toFixed(1) + '% 的组合更冷';
+}
+
+/* ================= 结构约束 ================= */
+function passStruct(gid, nums) {
+  if (!useStruct || !PROF || !PROF[gid]) return true;
+  const p = PROF[gid];
+  const sp = sumOf(nums), span = nums[nums.length - 1] - nums[0];
+  const odd = nums.filter(x => x % 2).length;
+  const cons = shapeOf(nums, 99).cons;
+  const ac = acValue(nums);
+  return sp >= p.sum[0] && sp <= p.sum[1]
+      && span >= p.span[0] && span <= p.span[1]
+      && odd >= p.odd[0] && odd <= p.odd[1]
+      && cons <= p.cons && ac >= p.ac[0] && ac <= p.ac[1];
+}
+
+/* ================= 生成 ================= */
+function overlapOf(a, b) { return a.filter(x => b.includes(x)).length; }
+
+/* 冷号就那几个，若只按最冷取样，5 注会挤在同一批号上。
+   这里在「冷」与「分散」之间取平衡：优先选与已有注重合不超过 lim 的候选。 */
+function makeOne(gid, existing) {
+  const g = GAMES[gid];
+  const budget = tier === 'cold' ? 3000 : (tier === 'mid' ? 45 : 400);
+  const lim = Math.max(2, g.k - 4);
+  let best = null, bestW = Infinity;          // 满足分散要求的最冷者
+  let any = null, anyW = Infinity;            // 不限分散的最冷者
+  for (let t = 0; t < budget; t++) {
+    const nums = pickUnique(g.k, g.N);
+    const blues = g.bluek === 1 ? pickUnique(1, g.blueN)[0] : pickUnique(g.bluek, g.blueN);
+    if (!passStruct(gid, nums)) continue;
+    const w = weightOf(gid, nums, blues);
+    if (w < anyW) { anyW = w; any = {nums, blues}; }
+    if (existing && existing.length) {
+      let ov = 0;
+      for (let i = 0; i < existing.length; i++)
+        ov = Math.max(ov, overlapOf(existing[i].nums, nums));
+      if (ov > lim) continue;
+    }
+    if (w < bestW) { bestW = w; best = {nums, blues}; }
+    if (tier === 'random') break;          // 随机档：取第一个合格样本
+  }
+  if (best) return best;
+  if (any) return any;
+  const nums = pickUnique(g.k, g.N);
+  const blues = g.bluek === 1 ? pickUnique(1, g.blueN)[0] : pickUnique(g.bluek, g.blueN);
+  return {nums, blues};
+}
+
+function generate() {
+  const g = GAMES[game];
+  lastType = game;
+  if (g.digits) {                    // 数字型：无分奖，冷门度不适用
+    lastBets = [];
+    for (let i = 0; i < count; i++)
+      lastBets.push({digits: Array.from({length: g.digits}, () => randInt(10))});
+    render(); autoCopy(); return;
+  }
+  const out = [], seen = new Set();
+  let guard = 0;
+  while (out.length < count && guard++ < count * 80) {
+    const b = makeOne(game, out);
+    const key = b.nums.join(',');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(b);
+  }
+  while (out.length < count) out.push(makeOne(game));
+  lastBets = out;
+  render();
+  autoCopy();
+}
+
+/* ================= 渲染结果 ================= */
+function ballHtml(v, cls, d) {
+  return '<span class="ball ' + cls + '" style="animation-delay:' + d + 'ms">' + pad(v) + '</span>';
+}
+function render() {
+  const g = GAMES[game], box = $('bets');
+  if (g.digits) {
+    $('resTitle').textContent = g.name + ' · ' + count + ' 注';
+    $('resMeta').textContent = '';
+    box.innerHTML = lastBets.map(function (b, i) {
+      return '<div class="bet" style="animation-delay:' + (i*35) + 'ms">'
+        + '<span class="idx">' + (i+1) + '</span><div class="body"><div class="balls">'
+        + b.digits.map(function (d, k) { return ballHtml(d, 'r', k*30); }).join('')
+        + '</div></div></div>';
+    }).join('') || '<div class="empty">还没有结果</div>';
+    $('summary').innerHTML = '<div class="summary"><span>数字型玩法奖金固定、不存在分奖，'
+      + '<b>冷门度不适用</b></span></div>';
+    return;
+  }
+
+  const m = MODEL.games[game];
+  const rows = lastBets.map(function (b, i) {
+    const blueArr = Array.isArray(b.blues) ? b.blues : [b.blues];
+    const lam = lambdaOf(game, b.nums, b.blues);
+    const w = weightOf(game, b.nums, b.blues);
+    const share = shareOf(lam);
+    const rel = share / shareOf(m.mu);
+    const pct = pctOf(game, w);
+    const f = shapeOf(b.nums, m.cap);
+    const sp = sumOf(b.nums), span = b.nums[b.nums.length-1] - b.nums[0];
+    const odd = b.nums.filter(function (x) { return x % 2; }).length;
+    const chips = [
+      {t:'和值', v:sp, ok:sp >= PROF[game].sum[0] && sp <= PROF[game].sum[1]},
+      {t:'跨度', v:span, ok:span >= PROF[game].span[0] && span <= PROF[game].span[1]},
+      {t:'奇偶', v:odd + ':' + (b.nums.length - odd),
+       ok:odd >= PROF[game].odd[0] && odd <= PROF[game].odd[1]},
+      {t:'连号', v:f.cons, ok:f.cons <= PROF[game].cons},
+      {t:'AC', v:acValue(b.nums), ok:acValue(b.nums) >= PROF[game].ac[0]}
+    ];
+    return '<div class="bet" style="animation-delay:' + (i*35) + 'ms">'
+      + '<span class="idx">' + (i+1) + '</span><div class="body">'
+      + '<div class="balls">'
+      + b.nums.map(function (v, k) { return ballHtml(v, 'r', k*28); }).join('')
+      + '<span class="plus">+</span>'
+      + blueArr.map(function (v, k) { return ballHtml(v, 'b', (b.nums.length+k)*28); }).join('')
+      + '</div>'
+      + '<div class="feats">' + chips.map(function (c) {
+          return '<span class="feat ' + (c.ok ? 'ok' : '') + '">' + c.t
+            + ' <b>' + c.v + '</b>' + (c.ok ? ' ✓' : '') + '</span>';
+        }).join('') + '</div>'
+      + '<div class="crowdrow">'
+      + '<span class="kv">预计同奖 <b>' + lam.toFixed(1) + '</b> 人</span>'
+      + '<span class="kv">份额 <b class="' + (rel > 1.05 ? 'good' : '') + '">'
+      + rel.toFixed(2) + '×</b></span>'
+      + '<div class="pbar" title="与随机一注的期望奖金份额之比（1.6 倍即满格）">'
+      + '<i style="width:' + Math.max(4, Math.min(100, (rel - 1) / 1.6 * 100)) + '%"></i></div>'
+      + '<span class="kv muted">' + pctLabel(pct) + '</span>'
+      + '</div></div></div>';
+  }).join('');
+
+  $('resTitle').textContent = g.name + ' · ' + count + ' 注';
+  $('resMeta').textContent = tierName() + (useStruct ? ' · 结构约束' : '');
+  box.innerHTML = rows;
+
+  const lams = lastBets.map(function (b) { return lambdaOf(game, b.nums, b.blues); });
+  const avgLam = lams.reduce(function (a, b) { return a + b; }, 0) / lams.length;
+  const avgRel = lams.map(function (l) { return shareOf(l); })
+    .reduce(function (a, b) { return a + b; }, 0) / lams.length / shareOf(m.mu);
+  const capPct = Math.round(m.capRatio * 100);
+  $('summary').innerHTML = '<div class="summary">'
+    + '<span>本组平均同奖 <b>' + avgLam.toFixed(1) + '</b> 人</span>'
+    + '<span>相对随机基准 <b class="' + (avgRel > 1.05 ? 'good' : '') + '">'
+    + avgRel.toFixed(2) + '×</b></span>'
+    + '<span>本彩种 <b>' + capPct + '%</b> 的期数单注奖金顶格'
+    + (capPct > 40 ? ' <span class="warn">（多数期数冷门无额外收益）</span>' : '') + '</span>'
+    + '</div>';
+}
+
+function tierName() {
+  return {random:'随机基准', mid:'偏冷门', cold:'极冷门'}[tier];
+}
+
+/* ================= 图表 ================= */
+function barChart(items, opts) {
+  opts = opts || {};
+  const W = 680, H = opts.h || 190, L = 40, R = 10, T = 14, B = 34;
+  const pw = W - L - R, ph = H - T - B;
+  const lo = opts.lo, hi = opts.hi;
+  const bw = pw / items.length;
+  const zero = T + ph * (1 - (0 - lo) / (hi - lo));
+  let out = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">';
+  out += '<line x1="' + L + '" y1="' + zero + '" x2="' + (W-R) + '" y2="' + zero
+       + '" stroke="#c9d2e3"/>';
+  out += '<text x="' + (L-6) + '" y="' + (zero+3) + '" font-size="9" fill="#9aa7bd" '
+       + 'text-anchor="end">1.00</text>';
+  items.forEach(function (it, i) {
+    const v = it.v - 1;
+    const y1 = T + ph * (1 - (v - lo) / (hi - lo));
+    const h = Math.abs(y1 - zero);
+    const col = v > 0.045 ? '#cf3a33' : (v < -0.045 ? '#2f6fd0' : '#a9b4c8');
+    out += '<rect x="' + (L + i*bw + bw*0.16) + '" y="' + Math.min(y1, zero)
+         + '" width="' + (bw*0.68) + '" height="' + Math.max(h, 1)
+         + '" fill="' + col + '" rx="1.5"/>';
+    if (bw > 13) {
+      out += '<text x="' + (L + i*bw + bw*0.5) + '" y="' + (H-16)
+           + '" font-size="' + Math.min(9.5, bw*0.62) + '" fill="#68738a" '
+           + 'text-anchor="middle">' + it.k + '</text>';
+    }
+  });
+  out += '</svg>';
+  return out;
+}
+
+function paintCrowd() {
+  const m = MODEL.games[game];
+  if (!m) {
+    // 福彩3D / 排列5 没有冷门度模型：组合空间太小、固定奖金、不与他人分奖池。
+    // 这里必须提前返回——否则下面 Object.keys(m.beta) 会直接抛异常，
+    // 而切换玩法时就会调用本函数（bindUI 里 onclick 和页签切换都调）。
+    const g = GAMES[game];
+    $('numChart').innerHTML = '<div class="empty"><b>' + g.name
+      + ' 没有人群偏好模型</b>数字型玩法固定奖金、不与他人分奖池，'
+      + '号码偏好对收益没有意义。<br>切回双色球或大乐透可查看号码偏好。</div>';
+    $('blueCard').style.display = 'none';
+    $('distTable').innerHTML = '<div class="empty">数字型玩法不设一等奖，没有奖级分布可统计</div>';
+    $('capBox').innerHTML = '<div class="empty">没有奖池可分，也就不存在奖金封顶</div>';
+    return;
+  }
+  const raw = Object.keys(m.beta).map(function (k) {
+    return {k: k, v: Math.exp(m.beta[k])};
+  });
+  const desc = raw.slice().sort(function (a, b) { return b.v - a.v; });
+  const asc = raw.slice().sort(function (a, b) { return a.v - b.v; });
+  const nums = raw.sort(function (a, b) { return (+a.k) - (+b.k); });
+  $('numChart').innerHTML = barChart(nums, {lo:-0.26, hi:0.26, h:200})
+    + '<div class="desc" style="margin-top:6px">'
+    + '最热 <b class="hot">' + desc.slice(0,3).map(function (x) { return x.k + '号 ' + x.v.toFixed(2); }).join('、') + '</b>'
+    + '　最冷 <b class="cold">' + asc.slice(0,3).map(function (x) { return x.k + '号 ' + x.v.toFixed(2); }).join('、') + '</b>'
+    + '　极差 ' + (desc[0].v / asc[0].v).toFixed(2) + ' 倍</div>';
+
+  if (game === 'ssq' && m.blue) {
+    $('blueCard').style.display = '';
+    const braw = Object.keys(m.blue).map(function (k) {
+      return {k: k, v: Math.exp(m.blue[k])};
+    }).sort(function (a, b) { return (+a.k) - (+b.k); });
+    const bd = braw.slice().sort(function (a, b) { return b.v - a.v; });
+    $('blueChart').innerHTML = barChart(braw, {lo:-0.26, hi:0.26, h:180})
+      + '<div class="desc" style="margin-top:6px">最热 '
+      + bd.slice(0,3).map(function (x) { return x.k + '号 ' + x.v.toFixed(2); }).join('、')
+      + '　最冷 ' + bd.slice(-3).map(function (x) { return x.k + '号 ' + x.v.toFixed(2); }).join('、')
+      + '　极差 ' + (bd[0].v / bd[bd.length-1].v).toFixed(2) + ' 倍</div>';
+  } else {
+    $('blueCard').style.display = 'none';
+  }
+
+  const st = STATS.games[game];
+  let rows = '';
+  st.dist.forEach(function (r) {
+    let lab;
+    if (r.hi >= 1e9) lab = r.lo + ' 以上';
+    else if (r.lo === r.hi) lab = '' + r.lo;
+    else lab = r.lo + '–' + r.hi;
+    let ratio, cls;
+    if (r.exp < 1e-6) { ratio = '&gt;1000×'; cls = 'hot'; }
+    else {
+      const v = r.obs / r.exp;
+      ratio = v < 1000 ? v.toFixed(1) + '×' : '&gt;1000×';
+      cls = v > 2 ? 'hot' : (v < 0.7 ? 'cold' : '');
+    }
+    rows += '<tr><td>' + lab + '</td><td class="num">' + r.obs + '</td>'
+      + '<td class="num muted">' + r.exp.toFixed(2) + '</td>'
+      + '<td class="num ' + cls + '">' + ratio + '</td></tr>';
+  });
+  $('distTable').innerHTML = '<table><thead><tr><th>一等奖注数</th>'
+    + '<th class="num">实测期数</th><th class="num">泊松期望</th>'
+    + '<th class="num">倍数</th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+  const p = st.prize;
+  $('capBox').innerHTML = '<div class="kpi" style="grid-template-columns:1fr 1fr">'
+    + '<div><div class="v">' + (p.at_cap_ratio*100).toFixed(1) + '%</div>'
+    + '<div class="k">单注奖金顶格（1000 万）的期数占比<br>'
+    + p.at_cap + ' / ' + p.with_prize + ' 期</div></div>'
+    + '<div><div class="v">' + (p.median/10000).toFixed(0) + ' 万</div>'
+    + '<div class="k">一等奖单注奖金中位数</div></div></div>'
+    + '<p class="desc" style="margin:12px 0 0">冷门号提高的是“同一笔奖金分给更少人”，'
+    + '所以只在<b>未顶格</b>的期数里产生收益。本彩种有 '
+    + (100 - p.at_cap_ratio*100).toFixed(0) + '% 的期数存在这个空间。</p>';
+}
+
+/* ================= 依据页 ================= */
+function paintProof() {
+  const q = STATS.games.ssq, d = STATS.games.dlt, mq = MODEL.games.ssq;
+  const rows = [
+    ['开奖号码是否均匀随机', '穷举组合空间得精确理论分布，与实测做卡方',
+      '号码频次：双色球 p=' + META.uniform.ssqFreq.toFixed(3) + '、大乐透 p='
+      + META.uniform.dltFreq.toFixed(2) + '；结构 6 项多在 p&gt;0.10'
+      + '（大乐透三区 p=' + META.uniform.dltZones.toFixed(3) + '，校正后不显著）',
+      '<span class="pill no">不能预测</span>'],
+    ['冷热号是否有预测力', '用历史频率回测下一期命中数',
+      '最热6个命中1.0956，最冷6个1.0966，随机期望1.0909（z=0.24/0.29）',
+      '<span class="pill no">无效</span>'],
+    ['大众选号是否均匀', '一等奖注数对照泊松分布，算离散指数',
+      '双色球 D=' + q.disp.toFixed(2) + '，χ²=' + Math.round(q.disp_chi2)
+      + '（p&lt;1e-300）；大乐透 D=' + d.disp.toFixed(2),
+      '<span class="pill yes">极不均匀</span>'],
+    ['能否反解号码偏好', '以一等奖注数为因变量的 quasi-Poisson 回归',
+      '双色球 LR χ²=' + Math.round(mq.fit.lr) + '（df=' + mq.fit.df
+      + '，p=' + mq.fit.p.toExponential(1) + '）',
+      '<span class="pill yes">可以</span>'],
+    ['单个号码的结论可靠吗', '33/35 次比较，用 Bonferroni 校正',
+      '门槛 |t|&gt;' + q.numbers.bonf_t.toFixed(2) + '，最强号码仅 t≈3.1',
+      '<span class="pill no">不可靠</span>'],
+    ['蓝球偏好可测吗', '六等奖注数（千万级样本）回归',
+      'p ' + (MODEL.games.ssq.blue_lr_p < 1e-300 ? '&lt; 1e-300'
+        : '= ' + MODEL.games.ssq.blue_lr_p.toExponential(1)),
+      '<span class="pill yes">可靠</span>'],
+    ['冷门号能提高期望吗', '期望份额 (1−e^−λ)/λ，λ 由模型给出',
+      '最冷约 ' + (shareOf(mq.mu * mq.w_min) / shareOf(mq.mu)).toFixed(2)
+      + '× 平均，最热约 ' + (shareOf(mq.mu * mq.w_max) / shareOf(mq.mu)).toFixed(2) + '×',
+      '<span class="pill yes">仅浮动奖</span>'],
+    ['能提高中奖概率吗', '组合数学，与选号无关',
+      '双色球 1/17,721,088；大乐透 1/21,425,712',
+      '<span class="pill no">不能</span>']
+  ];
+  $('proofTable').innerHTML = '<table><thead><tr><th style="width:23%">结论</th>'
+    + '<th style="width:25%">方法</th><th style="width:38%">统计量</th>'
+    + '<th style="width:14%">判定</th></tr></thead><tbody>'
+    + rows.map(function (r) {
+        return '<tr><td><b>' + r[0] + '</b></td><td class="muted">' + r[1]
+          + '</td><td class="muted">' + r[2] + '</td><td>' + r[3] + '</td></tr>';
+      }).join('') + '</tbody></table>';
+
+  $('excluded').innerHTML = '<ol style="margin:0;padding-left:20px;font-size:13px;'
+    + 'color:var(--ink2);line-height:1.85">'
+    + '<li><b>不预测号码。</b>LSTM / Transformer / 随机森林在彩票上没有可用信号，'
+    + '冷热号回测已证明与随机无差异。</li>'
+    + '<li><b>不做“必中”“高胜率”表述。</b>中奖概率固定，任何随号码变化的“胜率”'
+    + '都是把条件概率当成边际概率。</li>'
+    + '<li><b>不采用“图案理论”。</b>它声称组合概率不均等，与穷举组合空间得到的精确分布矛盾。</li>'
+    + '<li><b>不做“杀号”。</b>单号码效应经多重比较校正后不显著，只做组合级排序。</li>'
+    + '</ol>';
+
+  $('dataInfo').innerHTML = '<table><tbody>'
+    + '<tr><td class="muted" style="width:24%">双色球样本</td><td>'
+    + META.ssq.n + ' 期（' + META.ssq.range + '）· 福彩官网</td></tr>'
+    + '<tr><td class="muted">大乐透样本</td><td>' + META.dlt.n + ' 期（'
+    + META.dlt.range + '）· 体彩官网，奖级明细自 2016 年第 078 期起提供</td></tr>'
+    + '<tr><td class="muted">模型</td><td>quasi-Poisson GLM，因变量为一等奖注数，'
+    + 'offset 为 log(注数/组合空间)；权重经 Monte Carlo 归一化（'
+    + META.mc + ' 次抽样）</td></tr>'
+    + '<tr><td class="muted">解释力</td><td>模型 CV=' + META.cv.toFixed(2)
+    + '，实测 CV=' + META.cvObs.toFixed(2) + '。模型只解释了约四分之一的人群行为波动，'
+    + '其余来自未建模因素（具体图形、个人习惯、上期重号）。因此冷门度是<b>相对排序</b>，'
+    + '不是精确预测。</td></tr>'
+    + '<tr><td class="muted">复现</td><td>analysis_v2.py → stats_v2.json；'
+    + 'build_model.py → model_v2.json；build_app_v2.py → 本页面</td></tr>'
+    + '</tbody></table>';
+}
+
+/* ================= 交互 ================= */
+function syncChips() {
+  document.querySelectorAll('#gameChips .chip').forEach(function (b) {
+    b.classList.toggle('on', b.dataset.v === game);
+  });
+  document.querySelectorAll('#countChips .chip').forEach(function (b) {
+    b.classList.toggle('on', +b.dataset.v === count);
+  });
+  document.querySelectorAll('#tierChips .chip').forEach(function (b) {
+    b.classList.toggle('on', b.dataset.v === tier);
+  });
+  document.querySelectorAll('#structChips .chip').forEach(function (b) {
+    b.classList.toggle('on', (b.dataset.v === '1') === useStruct);
+  });
+  const g = GAMES[game];
+  const hasModel = !!MODEL.games[game];
+  $('tierChips').style.opacity = hasModel ? 1 : .45;
+  $('tierHint').textContent = hasModel ? '' : '（数字型不适用）';
+  document.querySelectorAll('#tierChips .chip').forEach(function (b) {
+    b.disabled = !hasModel;
+  });
+  $('honestBox').innerHTML = hasModel
+    ? '<b>冷门度只改变“中奖时和别人分多少”，不改变“能不能中”。</b><br>'
+      + '中奖概率恒为 1/' + g.spaceStr + '。本彩种约 '
+      + Math.round(MODEL.games[game].capRatio * 100) + '% 的期数单注奖金顶格，'
+      + '那些期数冷门号不产生额外收益。'
+    : '<b>' + g.name + ' 是数字型玩法，奖金固定、不存在分奖。</b><br>'
+      + '所以没有“同奖人数”可优化，冷门度在此不适用。';
+}
+
+function bindUI() {
+  $('gameChips').innerHTML = Object.keys(GAMES).map(function (k) {
+    return '<button class="chip' + (k === game ? ' on' : '') + '" data-v="' + k
+      + '">' + GAMES[k].name + '</button>';
+  }).join('');
+  $('countChips').innerHTML = [1, 3, 5, 10].map(function (n) {
+    return '<button class="chip' + (n === count ? ' on' : '') + '" data-v="' + n
+      + '">' + n + ' 注</button>';
+  }).join('');
+  $('tierChips').innerHTML = [
+    ['random', '随机基准', '均匀随机，作为对照组'],
+    ['mid', '偏冷门', '在候选里挑较冷的'],
+    ['cold', '极冷门', '3000 次抽样取最冷']
+  ].map(function (t) {
+    return '<button class="chip' + (t[0] === tier ? ' on' : '') + '" data-v="' + t[0]
+      + '" style="flex:1 1 100%">' + t[1] + '<small>' + t[2] + '</small></button>';
+  }).join('');
+
+  document.querySelectorAll('#gameChips .chip').forEach(function (b) {
+    b.onclick = function () { game = b.dataset.v; lastBets = []; syncChips(); resetResult(); paintCrowd(); };
+  });
+  document.querySelectorAll('#countChips .chip').forEach(function (b) {
+    b.onclick = function () { count = +b.dataset.v; syncChips(); };
+  });
+  document.querySelectorAll('#tierChips .chip').forEach(function (b) {
+    b.onclick = function () { if (b.disabled) return; tier = b.dataset.v; syncChips(); };
+  });
+  document.querySelectorAll('#structChips .chip').forEach(function (b) {
+    b.onclick = function () { useStruct = b.dataset.v === '1'; syncChips(); };
+  });
+  $('genBtn').onclick = generate;
+  $('copyBtn').onclick = copyBets;
+  if ($('blueN')) {
+    $('blueN').oninput = paintLab;
+  }
+  document.querySelectorAll('.tabs button').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('on'); });
+      $('tab-' + b.dataset.tab).classList.add('on');
+      if (b.dataset.tab === 'crowd') paintCrowd();
+      if (b.dataset.tab === 'lab') paintLab();
+      if (b.dataset.tab === 'recent') paintRecent();
+    };
+  });
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      e.preventDefault(); generate();
+    }
+  });
+}
+
+function resetResult() {
+  const g = GAMES[game];
+  $('resTitle').textContent = '还没有生成';
+  $('resMeta').textContent = '';
+  $('summary').innerHTML = '';
+  $('bets').innerHTML = '<div class="empty"><b>点「生成号码」开始</b>'
+    + '每注会标注预计同奖人数与奖金份额倍数</div>';
+}
+
+function textOf() {
+  const g = GAMES[game];
+  return lastBets.map(function (b, i) {
+    if (b.digits) return (i+1) + '. ' + b.digits.join(' ');
+    const blueArr = Array.isArray(b.blues) ? b.blues : [b.blues];
+    return (i+1) + '. ' + b.nums.map(pad).join(' ') + ' + ' + blueArr.map(pad).join(' ');
+  }).join('\n');
+}
+/* 复制反馈走弹窗，按钮保持原样，免得两个字来回闪 */
+let popTimer = null;
+function popup(title, sub, isErr) {
+  const el = $('pop');
+  if (!el) return;
+  el.className = 'on' + (isErr ? ' err' : '');
+  el.innerHTML = '<b>' + (isErr ? '' : '✓ ') + title + '</b>'
+    + (sub ? '<span>' + sub + '</span>' : '');
+  clearTimeout(popTimer);
+  popTimer = setTimeout(function () { el.className = ''; }, isErr ? 3200 : 1700);
+}
+
+function copyText(t, onOk, onFail) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(onOk, function () { fallback(t, onOk, onFail); });
+      return;
+    }
+  } catch (e) { /* 走兜底 */ }
+  fallback(t, onOk, onFail);
+}
+
+function fallback(t, onOk, onFail) {
+  let ok = false;
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch (e) { ok = false; }
+  if (ok) onOk(); else if (onFail) onFail();
+}
+
+function copyBets() {
+  if (!lastBets.length) { popup('还没有号码', '先点「生成号码」', true); return; }
+  const n = lastBets.length;
+  copyText(textOf(),
+    function () { popup('已复制号码到剪贴板', n + ' 注 · 直接 Ctrl+V 粘给店主'); },
+    function () { popup('复制失败', '请手动选中号码复制', true); });
+}
+
+/* 生成完自动复制一次：按一次键就能去粘贴。
+   代价是会覆盖剪贴板原有内容——所以按钮留在那里，随时能再复制一遍。 */
+function autoCopy() {
+  const n = lastBets.length;
+  if (!n) return;
+  try {
+    copyText(textOf(),
+      function () { popup('已复制号码到剪贴板', n + ' 注 · 直接 Ctrl+V 粘给店主'); }, null);
+  } catch (e) { /* 自动复制失败不打扰，按钮还在 */ }
+}
+
+/* ================= 中奖率实验室 ================= */
+function fmtP(x, d) {
+  const v = x * 100;
+  if (d === undefined) d = v >= 0.1 ? 2 : (v >= 0.01 ? 3 : 4);
+  return v.toFixed(d) + '%';
+}
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+function paintLab() {
+  if (!LAB) { return; }
+  const names = Object.keys(LAB.strategies);
+  const pick = function (p) {
+    for (let i = 0; i < names.length; i++) {
+      if (names[i].indexOf(p) === 0) return LAB.strategies[names[i]];
+    }
+    return null;
+  };
+  const A = pick('分散'), B = pick('小池'), C = pick('极度');
+  const one = LAB.cross[0];
+
+  $('labFacts').innerHTML = '<div class="facts">'
+    + '<div><i>1</i><span><b>单注中奖率是固定的，改不了。</b>一注双色球命中任意奖的概率 '
+    + fmtP(one.p) + '（1/' + one.odds.toFixed(1) + '），一等奖 1/17,721,088。'
+    + '换任何选号方法、任何"算法"，这个数都不会动。</span></div>'
+    + '<div><i>2</i><span><b>能改的是"中奖率 ↔ 奖金"的兑换比。</b>同样 16 元买 8 注，'
+    + '号码分散买时"至少一注中 3 红及以上"的概率是 ' + fmtP(A.q3) + '，'
+    + '全挤在 9 个号里只有 ' + fmtP(B.q3) + '——差 '
+    + (A.q3 / B.q3).toFixed(1) + ' 倍。</span></div>'
+    + '<div><i>3</i><span><b>中奖率的主力是蓝球。</b>双色球任意奖里 87.8% 是六等奖'
+    + '（蓝球中即中 5 元），所以"至少中一次"最快的办法是买不同蓝球：'
+    + '买 n 个不同蓝球，"至少中一次（≥5 元）"的概率下限就是 n/16，红球中了还会更高。</span></div>'
+    + '<div><i>4</i><span><b>但期望回报恒定。</b>固定奖返奖率：双色球 '
+    + (LAB.cross[0].ret * 100).toFixed(1) + '%、大乐透 '
+    + (LAB.cross[1].ret * 100).toFixed(1) + '%。不论怎么买，长期都亏同样的比例——'
+    + '优化只发生在"中奖频率"与"中奖金额"之间。</span></div>'
+    + '</div>';
+
+  // ---- 策略表 ----
+  let rows = '';
+  const add = function (label, r, note, cls) {
+    rows += '<tr><td>' + label + (note ? '<br><span class="muted" style="font-size:11px">'
+      + note + '</span>' : '') + '</td>'
+      + '<td class="num">' + r.n + '</td>'
+      + '<td class="num">' + (r.n * 2) + ' 元</td>'
+      + '<td class="num"' + (cls === 'hot' ? ' style="color:#c62828;font-weight:600"' : '') + '>'
+      + fmtP(r.q3) + '</td>'
+      + '<td class="num">' + fmtP(r.q4) + '</td>'
+      + '<td class="num">' + fmtP(r.q5, 3) + '</td></tr>';
+  };
+  add('分散买', A, '每注尽量只用没出现过的号', 'hot');
+  add('小池轮转', B, '8 注都取自 1–9 号');
+  add('极度集中', C, '8 注共用同 5 个号，只换末位');
+  $('stratTable').innerHTML = '<thead><tr><th>买法</th><th class="num">注数</th>'
+    + '<th class="num">花费</th><th class="num">至少中 3 红</th>'
+    + '<th class="num">至少中 4 红</th><th class="num">至少中 5 红</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody>';
+
+  const anyA = A.n / 16 + (1 - A.n / 16) * A.q4;
+  const anyB = B.n / 16 + (1 - B.n / 16) * B.q4;
+  $('stratNote').innerHTML = '如果 8 注各配一个不同蓝球，"至少中一次任意奖"的概率分别是 '
+    + '<b>' + fmtP(anyA) + '</b>（分散）和 <b>' + fmtP(anyB) + '</b>（集中）——'
+    + '差距被蓝球那 50% 的保底摊薄了。这就是为什么"中奖率"和"选号水平"关系不大：'
+    + '大部分中奖事件根本不看红球。';
+
+  // ---- 蓝球覆盖 ----
+  const n = parseInt($('blueN').value, 10) || 8;
+  $('blueNVal').textContent = n;
+  const cost = n * 2, p = n / 16, back = 5;
+  $('blueKpi').innerHTML = '<div><div class="v">' + fmtP(p, 1) + '</div>'
+    + '<div class="k">至少中一次（蓝球保底）</div></div>'
+    + '<div><div class="v">' + cost + ' 元</div><div class="k">成本（' + n + ' 注）</div></div>'
+    + '<div><div class="v">5 元</div><div class="k">保底回收</div></div>'
+    + '<div><div class="v">' + (back / cost * 100).toFixed(0) + '%</div>'
+    + '<div class="k">保底返奖率</div></div>';
+  $('blueNote').innerHTML = n >= 16
+    ? '买满 16 个蓝球 = <b>100% 中奖</b>，但花 32 元保底只回 5 元，返奖率 15.6%。'
+      + '"每次都能中"和"能赚钱"是两件完全不同的事，这一档把差距摆得最清楚。'
+    : '蓝球开在这 ' + n + ' 个号之一（' + fmtP(p, 1) + '）⇒ 至少中 5 元；'
+      + '剩下 ' + fmtP(1 - p, 1) + ' 的情况里，只有某注红球中 4 个及以上才有奖。';
+
+  // ---- 轮转 vs 复式 ----
+  const w = LAB.wheel, f9 = LAB.full9;
+  let tx = '';
+  w.tickets.forEach(function (t) {
+    tx += '<span>' + t.map(pad2).join(' ') + '</span>';
+  });
+  $('wheelBox').innerHTML = '<div class="cmp">'
+    + '<span class="k">轮转设计</span><span class="v">' + w.n + ' 注 / ' + w.n * 2 + ' 元</span>'
+    + '<span class="k">复式 9 选 6</span><span class="v">' + f9.n + ' 注 / ' + f9.n * 2 + ' 元</span>'
+    + '<span class="k">同样的 4 红命中率</span><span class="v">' + fmtP(w.q4)
+    + ' = ' + fmtP(f9.q4) + '</span>'
+    + '<span class="k">省下的钱</span><span class="v" style="color:#2e7d4f">'
+    + (f9.n * 2 - w.n * 2) + ' 元（1/' + Math.round(f9.n / w.n) + '）</span>'
+    + '</div><div class="wheeltx">' + tx + '</div>'
+    + '<p class="desc" style="margin-top:10px">这 12 注覆盖了 9 个号里<b>每一种</b> 4 号组合。'
+    + '代价是它不保证 3 红（' + fmtP(w.q3) + '，低于分散买的 ' + fmtP(A.q3) + '）——'
+    + '轮转是"池子准了就不落空"，不是"更容易中小奖"。</p>';
+
+  // ---- 跨玩法 ----
+  let cr = '';
+  LAB.cross.forEach(function (c) {
+    cr += '<tr><td>' + c.game + '</td>'
+      + '<td class="num">' + fmtP(c.p) + '</td>'
+      + '<td class="num">1/' + (c.odds >= 100 ? Math.round(c.odds).toLocaleString()
+        : c.odds.toFixed(1)) + '</td>'
+      + '<td class="num">' + (c.ret * 100).toFixed(1) + '%</td>'
+      + '<td class="num">' + c.total.toLocaleString() + '</td></tr>';
+  });
+  $('crossTable').innerHTML = '<thead><tr><th>玩法</th><th class="num">每 2 元中奖率</th>'
+    + '<th class="num">中奖几率</th><th class="num">固定奖返奖率</th>'
+    + '<th class="num">组合空间</th></tr></thead><tbody>' + cr + '</tbody>';
+  $('crossNote').innerHTML = '双色球 / 大乐透的 6.7% 看着高，是因为 5 元档太容易；'
+    + '福彩3D 组选6 只有 0.6%，但中了是 173 元。返奖率一栏才是真正的成本：'
+    + '两个乐透型只把固定奖的 24%–27% 返给你（其余在浮动奖池里），'
+    + '数字型玩法约 52%。<b>要「中奖频次」选乐透型的蓝球，要「返奖率」选数字型，'
+    + '要「中奖金额」两样都救不了你。</b>';
+}
+
+/* ================= 近 5 日开奖 ================= */
+let REC = RECENT || null;
+
+function d2(n) { return (n < 10 ? '0' : '') + n; }
+
+function money(v, unit) {
+  if (v == null || isNaN(v)) return '—';
+  if (v >= 1e8) return (v / 1e8).toFixed(2) + ' 亿';
+  if (v >= 1e4) return (v / 1e4).toFixed(0) + ' 万';
+  return Math.round(v) + (unit || '');
+}
+
+function stat(txt, cls) {
+  const el = $('recentStat');
+  if (!el) return;
+  el.textContent = txt || '';
+  el.className = 'recstat' + (cls ? ' ' + cls : '');
+}
+
+function lamOfItem(it) {
+  if (!MODEL.games[it.game]) return null;
+  try {
+    if (it.game === 'ssq') return lambdaOf('ssq', it.nums, it.extra[0]);
+    if (it.game === 'dlt') return lambdaOf('dlt', it.nums, it.extra);
+  } catch (e) { return null; }
+  return null;
+}
+
+function drawNums(it) {
+  let h = '';
+  it.nums.forEach(function (n) {
+    h += it.digit ? '<span class="ddigit">' + n + '</span>'
+                  : '<span class="dball r">' + d2(n) + '</span>';
+  });
+  if (it.extra && it.extra.length) {
+    h += '<span style="width:4px"></span>';
+    it.extra.forEach(function (n) { h += '<span class="dball b">' + d2(n) + '</span>'; });
+  }
+  return h;
+}
+
+function dcell(v, k, cls) {
+  return '<div class="dcell' + (cls ? ' ' + cls : '') + '"><b>' + v + '</b><span>' + k + '</span></div>';
+}
+
+function paintRecent(rec) {
+  if (rec && rec.items) REC = rec;
+  const box = $('recentBox');
+  if (!box) return;
+  if (!REC || !REC.items || !REC.items.length) {
+    box.innerHTML = '<div class="empty"><b>还没有开奖数据</b>'
+      + '点右上角「立即刷新」抓最新一期；离线也能看到打包时的快照</div>';
+    $('recentSub').textContent = '快照为空';
+    return;
+  }
+  const w = REC.window || {};
+  $('recentSub').innerHTML = '窗口 <b>' + (w.from || '?') + ' ~ ' + (w.to || '?') + '</b>'
+    + ' · 共 ' + REC.items.length + ' 条 · 抓取于 ' + (REC.fetched_at || '未知');
+  if (!REC.errors || !REC.errors.length) stat('官方接口 · 已同步', 'ok');
+
+  const order = ['ssq', 'dlt', 'fc3d', 'pl5'];
+  const groups = {};
+  REC.items.forEach(function (it) { (groups[it.game] = groups[it.game] || []).push(it); });
+
+  let html = '';
+  order.forEach(function (gid) {
+    const arr = groups[gid];
+    if (!arr || !arr.length) return;
+    html += '<div class="drawgrp"><div class="dgrphead"><b>' + arr[0].name + '</b>'
+      + '<span>' + arr[0].source + ' · 近 ' + REC.days + ' 日 ' + arr.length + ' 期</span></div>';
+    arr.forEach(function (it) {
+      const lam = lamOfItem(it);
+      let cells = dcell(money(it.sales), '销量');
+      if (it.first_count != null) {
+        cells += dcell(it.first_count + ' 注', it.first_money ? '单注 ' + money(it.first_money) : '一等奖');
+        cells += (lam != null) ? dcell(lam.toFixed(1) + ' 人', '模型预测 λ')
+                              : dcell(it.digit ? '数字型' : '—',
+                                      it.digit ? '无冷门度模型' : '模型未覆盖');
+      } else {
+        // 3D 官方接口不返回奖级注数，也没有奖池：与其堆两个「—」，不如说清为什么没有
+        cells += '<div class="dcell" style="grid-column:span 2"><b>数字型玩法</b>'
+          + '<span>不设一等奖</span></div>';
+      }
+      html += '<div class="drow">'
+        + '<div class="dissue"><b>' + it.issue + '</b><span>' + it.date.slice(5)
+        + ' ' + it.weekday + '</span></div>'
+        + '<div class="dnum">' + drawNums(it) + '</div>'
+        + cells + '</div>';
+    });
+    html += '</div>';
+  });
+  box.innerHTML = html;
+  paintRecentCalib();
+  paintRecentSrc();
+}
+
+function paintRecentCalib() {
+  const box = $('recentCalib');
+  if (!box || !REC) return;
+  const rows = [];
+  ['ssq', 'dlt'].forEach(function (gid) {
+    const items = REC.items.filter(function (x) {
+      return x.game === gid && x.first_count != null && lamOfItem(x) != null;
+    });
+    if (!items.length) return;
+    let act = 0, pred = 0;
+    items.forEach(function (x) { act += x.first_count; pred += lamOfItem(x); });
+    const g = MODEL.games[gid];
+    const dr = g.drift || null;
+    rows.push('<tr><td>' + g.name + '</td><td class="num">' + items.length + '</td>'
+      + '<td class="num">' + act.toFixed(0) + ' 注</td>'
+      + '<td class="num">' + pred.toFixed(1) + ' 注</td>'
+      + '<td class="num">' + (pred > 0 ? (act / pred).toFixed(2) : '—') + '×</td>'
+      + '<td class="num">' + (dr ? dr.mean_actual.toFixed(2) + ' / ' + dr.mean_pred.toFixed(2)
+        + '（z=' + (dr.z > 0 ? '+' : '') + dr.z.toFixed(1) + '）' : '—') + '</td></tr>');
+  });
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">这 5 天没有可对照的乐透型开奖</div>';
+    return;
+  }
+  box.innerHTML = '<table><thead><tr><th>彩种</th><th class="num">期数</th>'
+    + '<th class="num">实测一等奖</th><th class="num">模型预测</th>'
+    + '<th class="num">实测/预测</th><th class="num">近 60 期 实测/预测</th></tr></thead><tbody>'
+    + rows.join('') + '</tbody></table>'
+    + '<p class="desc" style="margin-top:8px">左边两列只统计这 5 天，样本太小，'
+    + '差 2–3 倍都正常；右边一列是模型上线时对最近 60 期的整体对照，|z| 超过 3 才算异常。'
+    + '这两个数字都不做任何自动修正——人群行为真变了，应该重估模型，而不是把偏差抹平。</p>';
+}
+
+function paintRecentSrc() {
+  const src = $('recentSrc');
+  const nx = $('recentNext');
+  if (!src) return;
+  const seen = {};
+  const list = [];
+  (REC.items || []).forEach(function (it) {
+    if (seen[it.game]) return;
+    seen[it.game] = 1;
+    list.push(it);
+  });
+  src.innerHTML = '<table><tbody>' + list.map(function (it) {
+    return '<tr><td>' + it.name + '</td><td>' + it.source + '</td></tr>';
+  }).join('') + '</tbody></table>';
+  if (nx) {
+    nx.innerHTML = '数据版本 v' + (META.version || '—')
+      + '，模型生成于 ' + (META.modelGen || '—')
+      + '。桌面版点「立即刷新」会现场调用官方接口；'
+      + '每周一 08:00 由 <code>iterate.py</code> 自动同步数据、重估权重并重建程序。';
+  }
+}
+
+function bindRecent() {
+  const btn = $('refreshBtn');
+  if (!btn) return;
+  btn.onclick = function () {
+    const api = window.pywebview && window.pywebview.api;
+    if (!api || !api.refresh_recent) {
+      stat('浏览器模式不能联网抓取，请用桌面版 exe', 'err');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = '抓取中…';
+    stat('正在连接官方接口…');
+    api.refresh_recent(5).then(function (r) {
+      if (r && r.ok) {
+        paintRecent(r.data);
+        stat('刚刚抓取 ' + (r.data.fetched_at || ''), 'ok');
+      } else {
+        stat('抓取失败：' + ((r && r.error) || '未知错误') + '，仍显示上次快照', 'err');
+      }
+    }).catch(function (e) {
+      stat('抓取失败：' + e, 'err');
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = '立即刷新';
+    });
+  };
+}
+
+/* ================= 启动 ================= */
+(function init() {
+  Object.keys(GAMES).forEach(function (k) {
+    const m = MODEL.games[k];
+    GAMES[k].spaceStr = m ? m.space.toLocaleString() : '—';
+  });
+  bindUI();
+  syncChips();
+  paintCrowd();
+  paintProof();
+  paintLab();
+  paintRecent();
+  bindRecent();
+  if (META.version) $('verTag').textContent = META.version.split('.').slice(0, 2).join('.');
+  $('subLine').innerHTML = '冷门度引擎 · ' + META.total + ' 期真实开奖 · v'
+    + (META.version || '—') + ' · 只降低撞号，不改变中奖概率';
+  $('footNote').innerHTML = '数据：中国福彩官网 / 中国体彩官网，'
+    + '双色球 ' + META.ssq.n + ' 期、大乐透 ' + META.dlt.n + ' 期，共 '
+    + META.total + ' 期。本工具只做统计描述，不构成投注建议；'
+    + '彩票是负期望的娱乐消费，请理性对待。';
+  window.addEventListener('pywebviewready', function () {
+    const btn = document.getElementById('reportBtn');
+    if (btn && window.pywebview && window.pywebview.api && window.pywebview.api.open_report) {
+      btn.style.display = 'inline-block';
+      btn.onclick = function () { window.pywebview.api.open_report(); };
+    }
+    // 桌面版优先用上次抓取的缓存（比打包快照新）
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.recent) {
+      window.pywebview.api.recent().then(function (r) {
+        if (r && r.ok && r.data && r.data.items) {
+          paintRecent(r.data);
+          stat(r.source === 'cache' ? '本地缓存 ' + (r.data.fetched_at || '') : '内置快照', 'ok');
+        }
+      });
+    }
+  });
+})();
+</script>
+<div id="pop"></div>
+</body>
+</html>
